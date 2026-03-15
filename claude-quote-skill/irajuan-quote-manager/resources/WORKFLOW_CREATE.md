@@ -1,0 +1,160 @@
+# יצירת הצעת מחיר — תהליך מלא
+
+## Step 1: Lead (ליד)
+
+Ask for **שם מלא** (full name) and **טלפון** (phone) in one prompt.
+
+```
+"שלום! בוא נתחיל ליצור הצעת מחיר.
+מה השם המלא של הלקוח ומספר הטלפון?"
+```
+
+1. `search_lead(phone)` — search by phone
+2. **Found** → show lead details, confirm with contractor, use existing `leadId`
+3. **Not found** → `create_lead(fullName, phone)` immediately
+4. Also collect if offered: email, address, workType, source (ערוץ הגעה)
+   - `workType` allowed values: שיפוץ דירה, צביעת דירה, התקנת מזגן, שיפוץ אמבטיה, החלפת דלתות, שיפוץ מטבח, התקנת פרקט, שיפוץ כללי, התקנת חלונות
+   - `source` allowed values: פייסבוק, המלצה, גוגל, אינסטגרם
+
+## Step 2: Project (פרויקט)
+
+Ask in **one prompt**:
+
+```
+"מעולה! עכשיו לגבי הפרויקט:
+• סוג פרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)
+• כתובת?
+• מספר חדרים?
+• גודל במ״ר?"
+```
+
+1. Auto-generate name: `"[fullName] — [address]"`
+2. `search_project(name)` — check for existing
+3. **Found** → confirm with contractor, use existing `projectId`
+4. **Not found** → `create_project(name, leadId, type, address, rooms, sizeSQM)`
+
+**At this point, ask the contractor:**
+```
+"יש לך כתב כמויות (Excel/PDF) או שנזין את הפריטים ידנית?"
+```
+- If BOQ → jump to [Step 3-BOQ](#step-3-boq-כתב-כמויות)
+- If manual → continue to Step 3a
+
+---
+
+## Step 3a: Manual Mode — Global Items (פריטים כלליים)
+
+```
+"מה הפריטים הכלליים שחלים על כל הדירה?
+לדוגמה: צביעה, לוח חשמל, אינסטלציה כללית..."
+```
+
+1. Parse the contractor's description into item names
+2. `get_catalog_candidates(items="צביעה|לוח חשמל|...")` — get candidates per item
+3. Claude matches each item (see [CATALOG_RULES.md](CATALOG_RULES.md)):
+   - High similarity (≥0.8) with clear gap → auto-pick
+   - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
+   - SQM items → use room sqm as quantity
+   - Ambiguous → ask contractor to choose from candidates
+   - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
+4. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
+5. Show created items for confirmation (use Room Parsed template from TEMPLATES.md)
+6. If contractor says none → skip to Step 3b
+
+## Step 3b: Manual Mode — Special Jobs (עבודות מיוחדות)
+
+```
+"האם יש עבודות מיוחדות?
+ניתן לתמחר לפי ימי עבודה או מחיר קבוע."
+```
+
+- **Work-day based**: catalog item "תעריף יום עבודה" × number of days
+- **Fixed price**: contractor provides total price directly
+
+1. Parse the contractor's description into item names
+2. `get_catalog_candidates(items="...")` → match to catalog
+3. Claude picks best match per item (same rules as Step 3a)
+4. Call `scan_room(projectId, roomName="עבודות מיוחדות", items=[...], offerType="withoutBOQ")`
+5. Show created items for confirmation
+6. If none → skip to Step 3c
+
+## Step 3c: Manual Mode — Room-by-Room (חדר אחרי חדר)
+
+For each room:
+
+```
+"בוא נעבור חדר חדר. ספר לי על החדר הראשון:
+• שם החדר?
+• מה הפריטים? (עם כמויות אם ידוע)"
+```
+
+1. Parse room description into item names
+2. `get_catalog_candidates(items="פרקט|שפכטל|...")` → get candidates
+3. Claude matches each item to catalog (same rules as Step 3a)
+4. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
+5. Show created result using Room Parsed template
+6. Let contractor confirm or correct
+7. Ask: "יש חדר נוסף?"
+8. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
+
+---
+
+## Step 3-BOQ: כתב כמויות
+
+When contractor provides a BOQ file (Excel/PDF):
+
+1. `create_boq(name, projectId, leadId, fileUrl)` — store BOQ record in Airtable
+2. `parse_boq(document_id)` — parse file, returns flat list: `[{Category, Description, Quantity, Unit}, ...]`
+3. Group items by `Category` — each unique Category becomes a room (roomName = Category)
+4. Collect all `Description` values across all rooms → `get_catalog_candidates(items="desc1|desc2|desc3|...")`
+5. Claude matches each item to catalog (same rules as Step 3a)
+6. For each room/Category: `scan_room(projectId, roomName=Category, items=[{name=Description, qty=Quantity, unit=Unit, catalog_id, unit_cost, unit_client_price}], offerType="BOQ")`
+7. Show parsed rooms summary:
+
+```
+"כתב הכמויות נקלט. נמצאו [N] חדרים:
+• [room1] — [X] פריטים
+• [room2] — [Y] פריטים
+...
+סה"כ [total] פריטים. האם הכל נראה תקין?"
+```
+
+8. Let contractor review and correct if needed
+
+---
+
+## Step 4: Review (סקירה)
+
+1. `get_project_rooms(projectId)` — fetch all rooms with items
+2. Display complete summary — all rooms, all items, quantities, units, prices
+3. Let contractor make corrections:
+   - **Add new room** → match items with `get_catalog_candidates` → `scan_room` with pricing
+   - **Add items to existing room** → `scan_room` returns `room_exists` with current items → merge → `replace_room_items` with full list
+   - **Corrections** → describe changes needed and handle accordingly
+
+## Step 5: Generate Quote (יצירת הצעת מחיר)
+
+1. `create_quote(projectId)` — creates quote with rooms_snapshot
+2. Show full quote summary to contractor (use Quote Summary template from TEMPLATES.md)
+3. Show internal cost summary (contractor only — use Internal Cost Summary template)
+4. Quote includes frozen snapshot of all rooms at this moment
+
+## Step 6: Send to Customer (שליחה ללקוח)
+
+1. Format WhatsApp message using Quote Summary template (TEMPLATES.md)
+   - **Important**: Do NOT include internal cost data (עלות, רווח) in customer message
+2. Show formatted message to contractor for approval:
+
+```
+"הנה ההודעה שתישלח ללקוח בוואטסאפ:
+[formatted message]
+
+לשלוח?"
+```
+
+3. **Only after explicit confirmation** → `send_whatsapp(phone, message)`
+4. Confirm sent:
+
+```
+"✅ ההצעה נשלחה בהצלחה ל-[phone]!"
+```

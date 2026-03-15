@@ -1,0 +1,98 @@
+# עדכון הצעת מחיר — תהליך
+
+## Step 1: Find Lead (מציאת ליד)
+
+```
+"מה מספר הטלפון של הלקוח?"
+```
+
+1. `search_lead(phone)` — find the lead
+2. **Not found** → suggest creating new quote instead (→ WORKFLOW_CREATE.md)
+
+## Step 2: Find Project (מציאת פרויקט)
+
+1. Ask for project name, or show lead's existing projects
+2. `search_project(name)` — find the project
+3. **Not found** → suggest creating new project
+
+## Step 3: Show Current State (מצב נוכחי)
+
+1. `get_project_rooms(projectId)` — fetch all rooms + items + costs
+2. Display current state:
+
+```
+"הנה המצב הנוכחי של הפרויקט [name]:
+
+📍 [room1] ([sqm] מ"ר):
+  • [item] — [qty] [unit] × ₪[price]
+  ...
+
+📍 [room2]:
+  • ...
+
+סה"כ: ₪[total]
+
+מה תרצה לשנות?"
+```
+
+## Step 4: What to Change (מה לשנות)
+
+Ask contractor what changes are needed. Supported operations:
+
+### Add new room
+- Parse items into item names
+- `get_catalog_candidates(items="פריט1|פריט2|...")` → get candidates
+- Claude matches each item to catalog (see CATALOG_RULES.md)
+- Unmatched → ask contractor for pricing → `update_catalog` → get catalog_id
+- `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType)` — creates room with priced items
+- Show created room items for confirmation
+
+### Add items to existing room
+1. `scan_room(projectId, roomName, newItems, offerType)` → returns `{status: "room_exists", items: [...]}`
+2. Match new items to catalog via `get_catalog_candidates` if not already matched
+3. Combine existing items (from response) with new matched items into one array
+4. `replace_room_items(projectId, roomName, fullItemsList, offerType)` → replaces room with complete list
+5. Show updated room for confirmation
+
+### Replace from BOQ
+- Contractor uploads revised BOQ file
+- `parse_boq(document_id)` — returns flat item list
+- Group by Category → rooms, match via `get_catalog_candidates`, then `scan_room` per room
+- Show updated rooms summary
+
+### Remove items (v2)
+- Not yet supported. Flag to contractor:
+```
+"מחיקת פריטים בודדים עדיין לא נתמכת. ניתן ליצור הצעה חדשה מאפס או להעלות כתב כמויות מעודכן."
+```
+
+### Change quantities (v2)
+- Not yet supported. Same message as above.
+
+## Step 5: Generate Updated Quote (הצעה מעודכנת)
+
+1. `create_quote(projectId)` — creates a **new** quote record (not overwriting previous)
+2. Show full quote summary with changes highlighted
+3. Show internal cost summary (contractor only)
+
+## Step 6: Send (שליחה)
+
+1. Format WhatsApp message (TEMPLATES.md)
+2. Show to contractor for approval
+3. **Only after confirmation** → `send_whatsapp(phone, message)`
+
+---
+
+## BOQ Update Variant
+
+When contractor uploads a revised BOQ file:
+
+1. Steps 1-3 same as above
+2. In Step 4: `parse_boq(document_id)` → group by Category → match via `get_catalog_candidates` → `scan_room` per room
+3. Continue from Step 5 (generate quote)
+
+### BOQ re-import
+If scan_room returns room_exists during BOQ import, ask:
+"חדר זה כבר קיים בפרויקט. האם להחליף את הפריטים הקיימים?"
+→ Yes: call replace_room_items with the new items from BOQ
+→ No: skip this room
