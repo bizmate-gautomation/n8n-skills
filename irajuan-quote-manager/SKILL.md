@@ -67,8 +67,8 @@ Contractor provides Excel/PDF file. `parse_boq` extracts flat item list. Claude 
 2. **Project** — ask type/address/rooms/sqm → name = "[name] — [address]" → `search_project` → create if needed
 3. **Items** — Manual: global → special jobs → rooms / BOQ: upload file → `parse_boq`
 4. **Match & Save** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
-5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id → include in `scan_room`
-6. **Quote** — `create_quote` → show summary
+5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id → include in `scan_room`. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
+6. **Quote** — `create_quote` → show internal cost summary first → contractor approves → then show client quote
 7. **Send** — format message → confirm → send
 
 For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
@@ -90,3 +90,5 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 12. For catalog matching rules → [CATALOG_RULES.md](CATALOG_RULES.md)
 13. For domain terms → [DOMAIN.md](DOMAIN.md)
 14. For message formatting → [TEMPLATES.md](TEMPLATES.md)
+15. **"יתומחר בהמשך" items** — insert with 0 in all cost fields, unit="קומפלט", never add to catalog (`update_catalog`). When prices arrive later, update room only (not catalog).
+16. **Quote generation order** — ALWAYS show internal cost quote (עלות + רווח) to contractor first. Only after contractor explicitly approves the costs, proceed to generate the client-facing quote.

@@ -92,6 +92,18 @@ Per-item calculation:
 
 ---
 
+## "יתומחר בהמשך" — To Be Priced Later
+
+When a contractor marks an item as **"יתומחר בהמשך"**:
+
+1. **Skip catalog matching** — do not call `get_catalog_candidates` for this item
+2. **Insert with zero costs** — call `scan_room` with `unit_cost: 0`, `unit_client_price: 0`
+3. **Unit = "קומפלט"** — always set unit to "קומפלט" for these items
+4. **Never add to catalog** — do NOT call `update_catalog`. This item stays out of the catalog even when prices are provided later
+5. **When contractor later provides prices** → update the room item via `replace_room_items` with the actual prices, keeping unit as "קומפלט". Still no `update_catalog`
+
+---
+
 ## Special Job Pricing (תעריף יום עבודה)
 
 - Catalog contains a **"תעריף יום עבודה"** entry with a daily rate

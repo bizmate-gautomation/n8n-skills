@@ -72,8 +72,12 @@ Ask contractor what changes are needed. Supported operations:
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
 1. `create_quote(projectId)` — creates a **new** quote record (not overwriting previous)
-2. Show full quote summary with changes highlighted
-3. Show internal cost summary (contractor only)
+2. **First: show internal cost summary** to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
+3. Ask contractor to review and approve the costs:
+   ```
+   "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
+   ```
+4. **Only after explicit contractor approval** → show full client quote summary with changes highlighted
 
 ## Step 6: Send (שליחה)
 
