@@ -56,7 +56,9 @@ Ask contractor what changes are needed. Supported operations:
 
 ### Replace from BOQ
 - Contractor uploads revised BOQ file
+- `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before parsing
 - `parse_boq(document_id)` — returns flat item list
+- `progress_update("⏳ מתאים פריטים לקטלוג...")` — notify contractor before batch matching
 - Group by Category → rooms, match via `get_catalog_candidates`, then `scan_room` per room
 - Show updated rooms summary
 
@@ -71,13 +73,14 @@ Ask contractor what changes are needed. Supported operations:
 
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
-1. `create_quote(projectId)` — creates a **new** quote record (not overwriting previous)
-2. **First: show internal cost summary** to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
-3. Ask contractor to review and approve the costs:
+1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
+2. `create_quote(projectId)` — creates a **new** quote record (not overwriting previous)
+3. **First: show internal cost summary** to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
+4. Ask contractor to review and approve the costs:
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-4. **Only after explicit contractor approval** → show full client quote summary with changes highlighted
+5. **Only after explicit contractor approval** → show full client quote summary with changes highlighted
 
 ## Step 6: Send (שליחה)
 

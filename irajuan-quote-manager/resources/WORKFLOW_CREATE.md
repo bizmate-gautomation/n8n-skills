@@ -51,16 +51,17 @@ Ask in **one prompt**:
 
 1. Parse the contractor's description into item names
 2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
-3. For all other items: `get_catalog_candidates(items="צביעה|לוח חשמל|...")` — get candidates per item
-4. Claude matches each item (see [CATALOG_RULES.md](CATALOG_RULES.md)):
+3. If 5+ non-"יתומחר בהמשך" items → `progress_update("⏳ מחפש פריטים בקטלוג...")` before catalog search
+4. For all other items: `get_catalog_candidates(items="צביעה|לוח חשמל|...")` — get candidates per item
+5. Claude matches each item (see [CATALOG_RULES.md](CATALOG_RULES.md)):
    - High similarity (≥0.8) with clear gap → auto-pick
    - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
    - SQM items → use room sqm as quantity
    - Ambiguous → ask contractor to choose from candidates
    - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
-5. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
-6. Show created items for confirmation (use Room Parsed template from TEMPLATES.md)
-7. If contractor says none → skip to Step 3b
+6. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
+7. Show created items for confirmation (use Room Parsed template from TEMPLATES.md)
+8. If contractor says none → skip to Step 3b
 
 ## Step 3b: Manual Mode — Special Jobs (עבודות מיוחדות)
 
@@ -107,12 +108,15 @@ For each room:
 When contractor provides a BOQ file (Excel/PDF):
 
 1. `create_boq(name, projectId, leadId, fileUrl)` — store BOQ record in Airtable
-2. `parse_boq(document_id)` — parse file, returns flat list: `[{Category, Description, Quantity, Unit}, ...]`
-3. Group items by `Category` — each unique Category becomes a room (roomName = Category)
-4. Collect all `Description` values across all rooms → `get_catalog_candidates(items="desc1|desc2|desc3|...")`
-5. Claude matches each item to catalog (same rules as Step 3a)
-6. For each room/Category: `scan_room(projectId, roomName=Category, items=[{name=Description, qty=Quantity, unit=Unit, catalog_id, unit_cost, unit_client_price}], offerType="BOQ")`
-7. Show parsed rooms summary:
+2. `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before parsing
+3. `parse_boq(document_id)` — parse file, returns flat list: `[{Category, Description, Quantity, Unit}, ...]`
+4. Group items by `Category` — each unique Category becomes a room (roomName = Category)
+5. `progress_update("⏳ מתאים פריטים לקטלוג...")` — notify contractor before batch matching
+6. Collect all `Description` values across all rooms → `get_catalog_candidates(items="desc1|desc2|desc3|...")`
+7. Claude matches each item to catalog (same rules as Step 3a)
+8. If 3+ rooms: `progress_update("⏳ יוצר חדרים בפרויקט...")` — notify before room loop
+9. For each room/Category: `scan_room(projectId, roomName=Category, items=[{name=Description, qty=Quantity, unit=Unit, catalog_id, unit_cost, unit_client_price}], offerType="BOQ")`
+10. Show parsed rooms summary:
 
 ```
 "כתב הכמויות נקלט. נמצאו [N] חדרים:
@@ -122,7 +126,7 @@ When contractor provides a BOQ file (Excel/PDF):
 סה"כ [total] פריטים. האם הכל נראה תקין?"
 ```
 
-8. Let contractor review and correct if needed
+11. Let contractor review and correct if needed
 
 ---
 
@@ -137,14 +141,15 @@ When contractor provides a BOQ file (Excel/PDF):
 
 ## Step 5: Generate Quote (יצירת הצעת מחיר)
 
-1. `create_quote(projectId)` — creates quote with rooms_snapshot
-2. **First: show internal cost summary** to contractor (use Internal Cost Summary template from TEMPLATES.md) — includes עלות, מחיר ללקוח, and רווח
-3. Ask contractor to review and approve the costs:
+1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
+2. `create_quote(projectId)` — creates quote with rooms_snapshot
+3. **First: show internal cost summary** to contractor (use Internal Cost Summary template from TEMPLATES.md) — includes עלות, מחיר ללקוח, and רווח
+4. Ask contractor to review and approve the costs:
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-4. **Only after explicit contractor approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
-5. Quote includes frozen snapshot of all rooms at this moment
+5. **Only after explicit contractor approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
+6. Quote includes frozen snapshot of all rooms at this moment
 
 ## Step 6: Send to Customer (שליחה ללקוח)
 

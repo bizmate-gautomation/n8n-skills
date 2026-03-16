@@ -113,3 +113,39 @@
 ```
 ✅ פרויקט חדש נוצר: [project_name]
 ```
+
+---
+
+## Progress Messages (הודעות התקדמות — sent to contractor via progress_update)
+
+Use these messages with `progress_update` during long operations. Send BEFORE the operation starts.
+
+### BOQ Processing
+```
+⏳ מעבד את כתב הכמויות...
+```
+
+### Catalog Matching (batch, 5+ items)
+```
+⏳ מתאים פריטים לקטלוג...
+```
+
+### Room Creation (batch, 3+ rooms)
+```
+⏳ יוצר חדרים בפרויקט...
+```
+
+### Catalog Search (manual mode, 5+ items)
+```
+⏳ מחפש פריטים בקטלוג...
+```
+
+### Quote Generation
+```
+⏳ מכין הצעת מחיר...
+```
+
+**Rules:**
+- Send BEFORE the operation starts, not after
+- One update per phase — only send a new update when entering a different operation type
+- Never send for single-room operations, lead/project creation, or interactive per-item flows

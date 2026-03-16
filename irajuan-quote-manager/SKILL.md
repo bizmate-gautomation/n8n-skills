@@ -48,6 +48,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
 | `create_quote` | Generate quote with rooms snapshot | `{projectId*, fileLink?}` |
+| `progress_update` | Send WhatsApp progress message to contractor during long operations | `{update_message*}` |
 
 ## Two Offer Modes
 
@@ -92,3 +93,4 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 14. For message formatting → [TEMPLATES.md](TEMPLATES.md)
 15. **"יתומחר בהמשך" items** — insert with 0 in all cost fields, unit="קומפלט", never add to catalog (`update_catalog`). When prices arrive later, update room only (not catalog).
 16. **Quote generation order** — ALWAYS show internal cost quote (עלות + רווח) to contractor first. Only after contractor explicitly approves the costs, proceed to generate the client-facing quote.
+17. **Progress updates** — call `progress_update` BEFORE starting these specific long operations: `parse_boq`, batch `get_catalog_candidates` (5+ items), multi-room `scan_room` loops (3+ rooms), `create_quote`. Use short Hebrew messages from Progress Messages templates (TEMPLATES.md). Send one update per distinct phase — do not send another update until the operation type changes (e.g., parsing → matching → room creation). Never send for: `search_lead`, `create_lead`, `search_project`, `create_project`, `get_project_rooms`, single-room operations, or any interactive per-item flow.
