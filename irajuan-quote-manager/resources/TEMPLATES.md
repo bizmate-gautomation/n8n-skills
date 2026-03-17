@@ -116,6 +116,25 @@
 
 ---
 
+## Offer Row Details (contractor only — for correction flow)
+
+```
+📝 שורות בהצעה ([offer_type]):
+
+[rowNum]. [name] — [qty] × ₪[unit_cost] = ₪[total_cost]
+[rowNum]. [name] — [qty] × ₪[unit_cost] = ₪[total_cost]
+
+מה תרצה לשנות?
+```
+
+After update + verify:
+```
+✅ עודכן:
+[rowNum]. [name] — [qty] × ₪[unit_cost] = ₪[total_cost]
+```
+
+---
+
 ## Progress Messages (הודעות התקדמות — sent to contractor via progress_update)
 
 Use these messages with `progress_update` during long operations. Send BEFORE the operation starts.
@@ -143,6 +162,11 @@ Use these messages with `progress_update` during long operations. Send BEFORE th
 ### Quote Generation
 ```
 ⏳ מכין הצעת מחיר...
+```
+
+### Offer Correction (עדכון שורות)
+```
+⏳ מעדכן הצעת מחיר...
 ```
 
 **Rules:**

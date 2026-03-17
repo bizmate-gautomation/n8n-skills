@@ -18,7 +18,8 @@
 ## Step 3: Show Current State (מצב נוכחי)
 
 1. `get_project_rooms(projectId)` — fetch all rooms + items + costs
-2. Display current state:
+2. If contractor wants to edit prices/quantities → also call `get_offer_json(project_id, offer_type)` to show offer rows with row numbers (Offer Row Details template). This helps the contractor identify which rows to change.
+3. Display current state:
 
 ```
 "הנה המצב הנוכחי של הפרויקט [name]:
@@ -68,8 +69,21 @@ Ask contractor what changes are needed. Supported operations:
 "מחיקת פריטים בודדים עדיין לא נתמכת. ניתן ליצור הצעה חדשה מאפס או להעלות כתב כמויות מעודכן."
 ```
 
-### Change quantities (v2)
-- Not yet supported. Same message as above.
+### Edit offer rows (עריכת שורות בהצעה)
+
+When contractor wants to change prices or quantities on existing offer items:
+
+1. `progress_update("⏳ מעדכן הצעת מחיר...")` — once before the correction cycle
+2. Identify rows. Contractor may specify by name or row number
+   - By name → `get_offer_json(project_id, offer_type)` without item_raw to find row numbers first (rare)
+   - By row number → proceed directly (90% of cases)
+3. Determine offer_type: cost, client, or both (Rule 19)
+4. For each offer_type:
+   a. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — fetch current state
+   b. Show current values (use Offer Row Details template); confirm changes with contractor
+   c. `update_offer_json({project_id, offer_type, updates: [{rowNum, quantity?, unit_cost?, total_cost?}]})` — patch only changed fields. Always include computed `total_cost` when changing quantity or unit_cost
+   d. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — verify changes applied; show updated values. If mismatch → report to contractor and retry
+5. Continue to Step 5 (Generate Updated Quote)
 
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
@@ -80,7 +94,11 @@ Ask contractor what changes are needed. Supported operations:
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-5. **Only after explicit contractor approval** → show full client quote summary with changes highlighted
+5. **If contractor approves costs** → skip to step 7
+6. **If contractor wants corrections** → use "Edit offer rows" flow from Step 4 → then return to step 1 to regenerate
+7. **Only after explicit cost approval** → show client quote with changes highlighted
+8. **If contractor wants corrections to client quote** → use "Edit offer rows" with offer_type="client" → regenerate → show updated client quote
+9. **Only after explicit client approval** → proceed to Step 6 (Send)
 
 ## Step 6: Send (שליחה)
 

@@ -48,6 +48,8 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
 | `create_quote` | Generate quote with rooms snapshot | `{projectId*, fileLink?}` |
+| `get_offer_json` | Fetch offer items (cost or client) from generated quote | `{project_id*, offer_type* ("cost"/"client"), item_raw? ("1\|3" — pipe-separated row numbers)}` — omit item_raw for ALL items |
+| `update_offer_json` | Patch specific fields on offer rows | `{project_id*, offer_type* ("cost"/"client"), updates*: [{rowNum, quantity?, unit_cost?, total_cost?}]}` |
 | `progress_update` | Send WhatsApp progress message to contractor during long operations | `{update_message*}` |
 
 ## Two Offer Modes
@@ -69,7 +71,7 @@ Contractor provides Excel/PDF file. `parse_boq` extracts flat item list. Claude 
 3. **Items** — Manual: global → special jobs → rooms / BOQ: upload file → `parse_boq`
 4. **Match & Save** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
 5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id → include in `scan_room`. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
-6. **Quote** — `create_quote` → show internal cost summary first → contractor approves → then show client quote
+6. **Quote** — `create_quote` → show internal cost summary → contractor reviews → corrections needed? `get_offer_json` → `update_offer_json` → verify → `create_quote` again → repeat until approved → show client quote
 7. **Send** — format message → confirm → send
 
 For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
@@ -93,4 +95,6 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 14. For message formatting → [TEMPLATES.md](TEMPLATES.md)
 15. **"יתומחר בהמשך" items** — insert with 0 in all cost fields, unit="קומפלט", never add to catalog (`update_catalog`). When prices arrive later, update room only (not catalog).
 16. **Quote generation order** — ALWAYS show internal cost quote (עלות + רווח) to contractor first. Only after contractor explicitly approves the costs, proceed to generate the client-facing quote.
-17. **Progress updates** — call `progress_update` BEFORE starting these specific long operations: `parse_boq`, batch `get_catalog_candidates` (5+ items), multi-room `scan_room` loops (3+ rooms), `create_quote`. Use short Hebrew messages from Progress Messages templates (TEMPLATES.md). Send one update per distinct phase — do not send another update until the operation type changes (e.g., parsing → matching → room creation). Never send for: `search_lead`, `create_lead`, `search_project`, `create_project`, `get_project_rooms`, single-room operations, or any interactive per-item flow.
+17. **Progress updates** — call `progress_update` BEFORE starting these specific long operations: `parse_boq`, batch `get_catalog_candidates` (5+ items), multi-room `scan_room` loops (3+ rooms), `create_quote`, offer correction cycles. Use short Hebrew messages from Progress Messages templates (TEMPLATES.md). Send one update per distinct phase — do not send another update until the operation type changes (e.g., parsing → matching → room creation). Never send for: `search_lead`, `create_lead`, `search_project`, `create_project`, `get_project_rooms`, single-room operations, or any interactive per-item flow.
+18. **Offer correction flow** — when contractor wants to change prices or quantities after quote generation: (1) `get_offer_json` to fetch current row state, (2) `update_offer_json` to patch only changed fields — always compute and include `total_cost` (= quantity × unit_cost) when changing quantity or unit_cost, (3) `get_offer_json` again for the SAME rows to verify changes applied — if values don't match, report the discrepancy to the contractor and retry, (4) `create_quote(projectId)` to regenerate the document. All four steps are mandatory — never skip the verification get. Use `item_raw` with specific row numbers (preferred in ~90% of cases) rather than fetching all items. When correcting both cost and client offers, run the get→update→verify cycle for each offer_type separately before regenerating.
+19. **Cost vs client offer updates** — quantity changes affect both offers, so auto-update both offer types without asking. For price changes: "change my cost" → `offer_type: "cost"`, "change client price" → `offer_type: "client"`, ambiguous → ask contractor which offer. Run the get→update→verify cycle per offer_type separately.

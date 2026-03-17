@@ -148,8 +148,26 @@ When contractor provides a BOQ file (Excel/PDF):
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-5. **Only after explicit contractor approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
-6. Quote includes frozen snapshot of all rooms at this moment
+5. **If contractor approves costs** → skip to step 7
+6. **If contractor wants corrections** → run Offer Correction sub-flow (see below), then return to step 1
+7. **Only after explicit cost approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
+8. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId)` to regenerate, show updated client quote again
+9. **Only after explicit client approval** → proceed to Step 6 (Send)
+
+### Offer Correction (תיקון הצעה)
+
+When contractor identifies rows to correct after reviewing either offer:
+
+1. `progress_update("⏳ מעדכן הצעת מחיר...")` — once before the correction cycle
+2. Identify rows + what to change. Ask contractor if not clear
+3. Determine offer_type per Rule 19 — quantity changes → auto-update both; price changes → ask or infer
+4. For each offer_type:
+   a. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — fetch current state
+   b. Show current values using Offer Row Details template; confirm what will change
+   c. `update_offer_json({project_id, offer_type, updates: [{rowNum, quantity?, unit_cost?, total_cost?}]})` — patch only changed fields. Always include computed `total_cost` when changing quantity or unit_cost
+   d. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — verify changes applied; show updated values. If mismatch → report to contractor and retry
+5. `progress_update("⏳ מכין הצעת מחיר...")` — before regeneration
+6. `create_quote(projectId)` — regenerate the document
 
 ## Step 6: Send to Customer (שליחה ללקוח)
 
