@@ -79,7 +79,7 @@ When contractor wants to change prices or quantities on existing offer items:
 2. Identify rows. Contractor may specify by name or row number
    - By name → `get_offer_json(project_id, offer_type)` without item_raw to find row numbers first (rare)
    - By row number → proceed directly (90% of cases)
-3. Determine offer_type: cost, client, or both (Rule 19)
+3. Determine offer_type: offer, client, or both (Rule 19)
 4. For each offer_type:
    a. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — fetch current state
    b. Show current values (use Offer Row Details template); confirm changes with contractor
