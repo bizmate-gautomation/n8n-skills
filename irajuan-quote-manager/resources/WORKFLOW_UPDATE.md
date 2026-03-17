@@ -1,5 +1,7 @@
 # עדכון הצעת מחיר — תהליך
 
+> **Always start with phone number (Step 1).** Never skip to project search — you need the lead first.
+
 ## Step 1: Find Lead (מציאת ליד)
 
 ```
