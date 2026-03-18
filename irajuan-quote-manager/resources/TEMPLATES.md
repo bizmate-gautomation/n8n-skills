@@ -135,6 +135,20 @@ After update + verify:
 
 ---
 
+## Quote Selection List (contractor only — for update flow)
+
+```
+📋 נמצאו [N] הצעות מחיר עבור [lead name]:
+
+1. [שם הצעת מחיר] — [תאריך יצירה]
+2. [שם הצעת מחיר] — [תאריך יצירה]
+...
+
+באיזו הצעה תרצה לטפל?
+```
+
+---
+
 ## Progress Messages (הודעות התקדמות — sent to contractor via progress_update)
 
 Use these messages with `progress_update` during long operations. Send BEFORE the operation starts.

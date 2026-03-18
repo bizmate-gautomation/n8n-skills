@@ -47,6 +47,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
+| `search_quote` | Search quotes by project ID | `{search_projectId*}` — returns quote records with name, links, dates |
 | `create_quote` | Generate quote with rooms snapshot | `{projectId*, fileLink?}` |
 | `get_offer_json` | Fetch offer items (cost or client) from generated quote | `{project_id*, offer_type* ("cost"/"client"), item_raw? ("1\|3" — pipe-separated row numbers)}` — omit item_raw for ALL items |
 | `update_offer_json` | Patch specific fields on offer rows | `{project_id*, offer_type* ("cost"/"client"), updates*: [{rowNum, quantity?, unit_cost?, total_cost?}]}` |

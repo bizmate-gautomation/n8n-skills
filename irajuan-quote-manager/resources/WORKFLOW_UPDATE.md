@@ -4,18 +4,19 @@
 
 ## Step 1: Find Lead (מציאת ליד)
 
-```
 "מה מספר הטלפון של הלקוח?"
-```
 
 1. `search_lead(phone)` — find the lead
 2. **Not found** → suggest creating new quote instead (→ WORKFLOW_CREATE.md)
+3. Lead found → extract `פרוייקט` array (list of project IDs) from response
 
-## Step 2: Find Project (מציאת פרויקט)
+## Step 2: Find Quote (מציאת הצעה)
 
-1. Ask for project name, or show lead's existing projects
-2. `search_project(name)` — find the project
-3. **Not found** → suggest creating new project
+1. For each project_id in lead's `פרוייקט` → `search_quote(search_projectId=project_id)`
+2. Collect all quotes across all projects
+3. **No quotes found** → tell contractor no quotes exist for this lead, suggest creating new quote
+4. **Exactly 1 quote** → use it directly, show quote name for confirmation, extract projectId from quote's `פרוייקט` field
+5. **Multiple quotes** → show numbered list (use Quote Selection List template) → contractor picks by number → extract projectId from selected quote's `פרוייקט` field
 
 ## Step 3: Show Current State (מצב נוכחי)
 
