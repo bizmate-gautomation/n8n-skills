@@ -20,7 +20,7 @@
 
 ## Step 3: Show Current State (מצב נוכחי)
 
-1. `get_offer_json(project_id, "cost", item_raw="")` — fetch ALL items from the cost offer
+1. `get_offer_json(project_id, "offer", item_raw="")` — fetch ALL items from the cost offer
 2. `get_offer_json(project_id, "client", item_raw="")` — fetch ALL items from the client offer
 3. Display both offers in rowNum order (use Current Quote State template)
 4. Ask contractor what they want to change
