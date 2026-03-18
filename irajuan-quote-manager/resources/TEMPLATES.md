@@ -135,6 +135,30 @@ After update + verify:
 
 ---
 
+## Current Quote State (contractor only — for update flow)
+
+```
+📋 מצב נוכחי של ההצעה — [quote file_name]:
+
+💰 עלות (פנימי):
+[rowNum]. [name] — [quantity] × ₪[unit_cost] = ₪[total_cost]
+[rowNum]. [name] — [quantity] × ₪[unit_cost] = ₪[total_cost]
+...
+סה"כ עלות: ₪[sum of all total_cost]
+
+👤 מחיר ללקוח:
+[rowNum]. [name] — [quantity] × ₪[unit_cost] = ₪[total_cost]
+[rowNum]. [name] — [quantity] × ₪[unit_cost] = ₪[total_cost]
+...
+סה"כ ללקוח: ₪[sum of all total_cost]
+
+רווח: ₪[client_total - cost_total] ([profit_pct]%)
+
+מה תרצה לשנות?
+```
+
+---
+
 ## Quote Selection List (contractor only — for update flow)
 
 ```

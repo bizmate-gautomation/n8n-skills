@@ -20,24 +20,10 @@
 
 ## Step 3: Show Current State (מצב נוכחי)
 
-1. `get_project_rooms(projectId)` — fetch all rooms + items + costs
-2. If contractor wants to edit prices/quantities → also call `get_offer_json(project_id, offer_type)` to show offer rows with row numbers (Offer Row Details template). This helps the contractor identify which rows to change.
-3. Display current state:
-
-```
-"הנה המצב הנוכחי של הפרויקט [name]:
-
-📍 [room1] ([sqm] מ"ר):
-  • [item] — [qty] [unit] × ₪[price]
-  ...
-
-📍 [room2]:
-  • ...
-
-סה"כ: ₪[total]
-
-מה תרצה לשנות?"
-```
+1. `get_offer_json(project_id, "cost", item_raw="")` — fetch ALL items from the cost offer
+2. `get_offer_json(project_id, "client", item_raw="")` — fetch ALL items from the client offer
+3. Display both offers in rowNum order (use Current Quote State template)
+4. Ask contractor what they want to change
 
 ## Step 4: What to Change (מה לשנות)
 
