@@ -20,8 +20,8 @@
 
 ## Step 3: Show Current State (מצב נוכחי)
 
-1. `get_offer_json(project_id, "offer", item_raw="")` — fetch ALL items from the cost offer
-2. `get_offer_json(project_id, "client", item_raw="")` — fetch ALL items from the client offer
+1. `get_offer_json(project_id, "offer", item_raw="all")` — fetch ALL items from the cost offer
+2. `get_offer_json(project_id, "client", item_raw="all")` — fetch ALL items from the client offer
 3. Display both offers in rowNum order (use Current Quote State template)
 4. Ask contractor what they want to change
 
@@ -64,7 +64,7 @@ When contractor wants to change prices or quantities on existing offer items:
 
 1. `progress_update("⏳ מעדכן הצעת מחיר...")` — once before the correction cycle
 2. Identify rows. Contractor may specify by name or row number
-   - By name → `get_offer_json(project_id, offer_type)` without item_raw to find row numbers first (rare)
+   - By name → `get_offer_json(project_id, offer_type)` with item_raw = all to find row numbers first (rare)
    - By row number → proceed directly (90% of cases)
 3. Determine offer_type: cost or client (Rule 19)
 4. For each offer_type:
