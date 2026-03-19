@@ -64,7 +64,7 @@ When contractor wants to change prices or quantities on existing offer items:
 
 1. `progress_update("⏳ מעדכן הצעת מחיר...")` — once before the correction cycle
 2. Identify rows. Contractor may specify by name or row number
-   - By name → `get_offer_json(project_id, offer_type)` with item_raw = all to find row numbers first (rare)
+   - By name → `get_offer_json(project_id, offer_type, item_raw=all)` to find row numbers first (rare)
    - By row number → proceed directly (90% of cases)
 3. Determine offer_type: cost or client (Rule 19)
 4. For each offer_type:
