@@ -152,7 +152,7 @@ When contractor provides a BOQ file (Excel/PDF):
 6. **If contractor wants corrections** → run Offer Correction sub-flow (see below), then return to step 1
 7. **Only after explicit cost approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
 8. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId)` to regenerate, show updated client quote again
-9. **Only after explicit client approval** → proceed to Step 6 (Send)
+9. **Only after explicit client approval** → done. Confirm quote is ready.
 
 ### Offer Correction (תיקון הצעה)
 
@@ -169,22 +169,3 @@ When contractor identifies rows to correct after reviewing either offer:
 5. `progress_update("⏳ מכין הצעת מחיר...")` — before regeneration
 6. `create_quote(projectId)` — regenerate the document
 
-## Step 6: Send to Customer (שליחה ללקוח)
-
-1. Format WhatsApp message using Quote Summary template (TEMPLATES.md)
-   - **Important**: Do NOT include internal cost data (עלות, רווח) in customer message
-2. Show formatted message to contractor for approval:
-
-```
-"הנה ההודעה שתישלח ללקוח בוואטסאפ:
-[formatted message]
-
-לשלוח?"
-```
-
-3. **Only after explicit confirmation** → `send_whatsapp(phone, message)`
-4. Confirm sent:
-
-```
-"✅ ההצעה נשלחה בהצלחה ל-[phone]!"
-```

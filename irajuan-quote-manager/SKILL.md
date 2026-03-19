@@ -1,6 +1,6 @@
 ---
 name: irajuan-quote-manager
-description: Manages construction renovation quotes for איראחואן (Y.H.B Rajuan). Creates leads, projects, matches items to catalog, scans rooms with pricing, generates quotes, sends via WhatsApp. Two modes - manual room entry and BOQ (כתב כמויות) file import. Use when discussing renovation projects, quotes, leads, rooms, pricing, catalog, or construction work in Hebrew.
+description: Manages construction renovation quotes for איראחואן (Y.H.B Rajuan). Creates leads, projects, matches items to catalog, scans rooms with pricing, generates quotes. Two modes - manual room entry and BOQ (כתב כמויות) file import. Use when discussing renovation projects, quotes, leads, rooms, pricing, catalog, or construction work in Hebrew.
 ---
 
 # ניהול הצעות מחיר — איראחואן
@@ -73,7 +73,7 @@ Contractor provides Excel/PDF file. `parse_boq` extracts flat item list. Claude 
 4. **Match & Save** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
 5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id → include in `scan_room`. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
 6. **Quote** — `create_quote` → show internal cost summary → contractor reviews → corrections needed? `get_offer_json` → `update_offer_json` → verify → `create_quote` again → repeat until approved → show client quote
-7. **Send** — format message → confirm → send
+
 
 For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 
@@ -88,7 +88,7 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 7. **Global items use roomName="כללי"** — apartment-wide items like paint, electrical panel, general plumbing.
 8. **Special jobs use roomName="עבודות מיוחדות"** — priced by work days or fixed price.
 8. **Project naming convention** — always format as: "[שם מלא] — [כתובת]".
-9. **Confirm before sending** — never call `send_whatsapp` without explicit contractor approval of the message content.
+
 10. **Match before scan** — always call `get_catalog_candidates` before `scan_room` so rooms are created with full pricing.
 11. **parse_boq output mapping** — `Category` → roomName, `Description` → item name for `get_catalog_candidates`.
 12. For catalog matching rules → [CATALOG_RULES.md](CATALOG_RULES.md)

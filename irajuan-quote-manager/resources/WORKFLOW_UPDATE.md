@@ -87,13 +87,7 @@ When contractor wants to change prices or quantities on existing offer items:
 6. **If contractor wants corrections** → use "Edit offer rows" flow from Step 4 → then return to step 1 to regenerate
 7. **Only after explicit cost approval** → show client quote with changes highlighted
 8. **If contractor wants corrections to client quote** → use "Edit offer rows" with offer_type="client" → regenerate → show updated client quote
-9. **Only after explicit client approval** → proceed to Step 6 (Send)
-
-## Step 6: Send (שליחה)
-
-1. Format WhatsApp message (TEMPLATES.md)
-2. Show to contractor for approval
-3. **Only after confirmation** → `send_whatsapp(phone, message)`
+9. **Only after explicit client approval** → done. Confirm quote is ready.
 
 ---
 
