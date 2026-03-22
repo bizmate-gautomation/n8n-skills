@@ -70,7 +70,7 @@ Ask in **one prompt**:
 ניתן לתמחר לפי ימי עבודה או מחיר קבוע."
 ```
 
-- **Work-day based**: catalog item "תעריף יום עבודה" × number of days
+- **Work-day based**: see Work-Day Pricing in [CATALOG_RULES.md](CATALOG_RULES.md)
 - **Fixed price**: contractor provides total price directly
 
 1. Parse the contractor's description into item names

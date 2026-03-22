@@ -104,8 +104,10 @@ When a contractor marks an item as **"יתומחר בהמשך"**:
 
 ---
 
-## Special Job Pricing (תעריף יום עבודה)
+## Work-Day Pricing (תעריף יום עבודה)
 
 - Catalog contains a **"תעריף יום עבודה"** entry with a daily rate
-- Special jobs: quantity = number of work days
-- Alternative: contractor specifies a fixed total price (overrides catalog rate)
+- Applies to **any room** (global, special jobs, or room-by-room) — not limited to special jobs
+- **Quantity is always 1**. Multiply the daily rate × number of work days to compute `unit_cost` and `unit_client_price`
+  - Example: "טיפול רטיבות 5 ימי עבודה" with daily rate cost=200, client_price=300 → `quantity: 1, unit_cost: 1000, unit_client_price: 1500`
+- Alternative: contractor specifies a fixed total price → quantity=1, unit_cost=fixed price
