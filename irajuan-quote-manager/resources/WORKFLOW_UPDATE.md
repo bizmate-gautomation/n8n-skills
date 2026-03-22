@@ -87,7 +87,7 @@ When contractor wants to change prices or quantities on existing offer items:
 6. **If contractor wants corrections** → use "Edit offer rows" flow from Step 4 → then return to step 1 to regenerate
 7. **Only after explicit cost approval** → show client quote with changes highlighted
 8. **If contractor wants corrections to client quote** → use "Edit offer rows" with offer_type="client" → regenerate → show updated client quote
-9. **Only after explicit client approval** → done. Confirm quote is ready.
+9. **Only after explicit client approval** → done. Confirm quote is ready using the Quote created template — always include the Drive URLs (לינק להצעת מחיר עלות, לינק להצעת מחיר) from the `create_quote` response.
 
 ---
 

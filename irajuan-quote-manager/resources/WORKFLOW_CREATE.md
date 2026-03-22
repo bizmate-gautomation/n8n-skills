@@ -152,7 +152,7 @@ When contractor provides a BOQ file (Excel/PDF):
 6. **If contractor wants corrections** → run Offer Correction sub-flow (see below), then return to step 1
 7. **Only after explicit cost approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
 8. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId)` to regenerate, show updated client quote again
-9. **Only after explicit client approval** → done. Confirm quote is ready.
+9. **Only after explicit client approval** → done. Confirm quote is ready using the Quote created template — always include the Drive URLs (לינק להצעת מחיר עלות, לינק להצעת מחיר) from the `create_quote` response.
 
 ### Offer Correction (תיקון הצעה)
 
