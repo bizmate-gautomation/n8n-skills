@@ -142,17 +142,19 @@ When contractor provides a BOQ file (Excel/PDF):
 ## Step 5: Generate Quote (יצירת הצעת מחיר)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
-2. `create_quote(projectId)` — creates quote with rooms_snapshot
-3. **First: show internal cost summary** to contractor (use Internal Cost Summary template from TEMPLATES.md) — includes עלות, מחיר ללקוח, and רווח
-4. Ask contractor to review and approve the costs:
+2. `create_quote(projectId, quote_type="offer")` — generate cost quote
+3. Show internal cost summary to contractor (use Internal Cost Summary template from TEMPLATES.md) — includes עלות, מחיר ללקוח, and רווח
+4. Show the cost quote `driveLink` immediately (use **Cost quote created** template from TEMPLATES.md)
+5. Ask contractor to review and approve the costs:
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-5. **If contractor approves costs** → skip to step 7
-6. **If contractor wants corrections** → run Offer Correction sub-flow (see below), then return to step 1
-7. **Only after explicit cost approval** → show full client quote summary (use Quote Summary template from TEMPLATES.md)
-8. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId)` to regenerate, show updated client quote again
-9. **Only after explicit client approval** → done. Confirm quote is ready using the Quote created template — always include the Drive URLs (לינק להצעת מחיר עלות, לינק להצעת מחיר) from the `create_quote` response.
+6. **If contractor approves costs** → skip to step 8
+7. **If contractor wants corrections** → run Offer Correction sub-flow (see below), then return to step 1
+8. **Only after explicit cost approval** → `create_quote(projectId, quote_type="client")` — generate client quote
+9. Show client quote summary (use Quote Summary template from TEMPLATES.md) and show the client quote `driveLink` immediately (use **Client quote created** template from TEMPLATES.md)
+10. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId, quote_type="client")` to regenerate, show updated client quote + `driveLink` again
+11. **Only after explicit client approval** → done.
 
 ### Offer Correction (תיקון הצעה)
 
@@ -167,5 +169,5 @@ When contractor identifies rows to correct after reviewing either offer:
    c. `update_offer_json({project_id, offer_type, updates: [{rowNum, quantity?, unit_cost?, total_cost?}]})` — patch only changed fields. Always include computed `total_cost` when changing quantity or unit_cost
    d. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — verify changes applied; show updated values. If mismatch → report to contractor and retry
 5. `progress_update("⏳ מכין הצעת מחיר...")` — before regeneration
-6. `create_quote(projectId)` — regenerate the document
+6. `create_quote(projectId, quote_type)` — regenerate the relevant document, show updated `driveLink`
 

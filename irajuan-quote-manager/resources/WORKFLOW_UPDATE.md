@@ -77,17 +77,19 @@ When contractor wants to change prices or quantities on existing offer items:
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
-2. `create_quote(projectId)` — creates a **new** quote record (not overwriting previous)
-3. **First: show internal cost summary** to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
-4. Ask contractor to review and approve the costs:
+2. `create_quote(projectId, quote_type="offer")` — generate cost quote (new record, not overwriting previous)
+3. Show internal cost summary to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
+4. Show the cost quote `driveLink` immediately (use **Cost quote created** template from TEMPLATES.md)
+5. Ask contractor to review and approve the costs:
    ```
    "האם העלויות נראות תקינות? אפשר לתקן לפני שנמשיך להצעה ללקוח."
    ```
-5. **If contractor approves costs** → skip to step 7
-6. **If contractor wants corrections** → use "Edit offer rows" flow from Step 4 → then return to step 1 to regenerate
-7. **Only after explicit cost approval** → show client quote with changes highlighted
-8. **If contractor wants corrections to client quote** → use "Edit offer rows" with offer_type="client" → regenerate → show updated client quote
-9. **Only after explicit client approval** → done. Confirm quote is ready using the Quote created template — always include the Drive URLs (לינק להצעת מחיר עלות, לינק להצעת מחיר) from the `create_quote` response.
+6. **If contractor approves costs** → skip to step 8
+7. **If contractor wants corrections** → use "Edit offer rows" flow from Step 4 → then return to step 1 to regenerate
+8. **Only after explicit cost approval** → `create_quote(projectId, quote_type="client")` — generate client quote
+9. Show client quote with changes highlighted and show the client quote `driveLink` immediately (use **Client quote created** template from TEMPLATES.md)
+10. **If contractor wants corrections to client quote** → use "Edit offer rows" with offer_type="client" → `create_quote(projectId, quote_type="client")` to regenerate → show updated client quote + `driveLink` again
+11. **Only after explicit client approval** → done.
 
 ---
 

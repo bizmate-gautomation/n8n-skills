@@ -49,12 +49,16 @@
 
 ## Success Confirmations
 
-**Quote created:**
+**Cost quote created:**
 ```
-✅ הצעת מחיר נוצרה בהצלחה!
+✅ הצעת מחיר עלות נוצרה!
+📄 הצעת מחיר עלות: [driveLink from create_quote with quote_type="offer"]
+```
 
-📄 הצעת מחיר עלות: [לינק להצעת מחיר עלות]
-📄 הצעת מחיר ללקוח: [לינק להצעת מחיר]
+**Client quote created:**
+```
+✅ הצעת מחיר ללקוח נוצרה!
+📄 הצעת מחיר ללקוח: [driveLink from create_quote with quote_type="client"]
 ```
 
 **Lead created:**
