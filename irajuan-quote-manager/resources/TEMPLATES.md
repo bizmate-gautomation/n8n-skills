@@ -145,21 +145,46 @@ After update + verify:
 ## BOQ Komplet Items Pricing Request
 
 ```
-נמצאו [N] פריטי קומפלט שדורשים תמחור ידני:
+נמצאו [N_total] פריטי קומפלט:
 
-1. [ID] [Description] ([Category])
+📏 פריטים שניתן להתאים לקטלוג — נדרשת כמות ([N_B] פריטים):
+
+1. *[ID]* [Description] ([Category])
+   הערות: [Notes]
+   ← כמה [unit — e.g., מ"ר / מטר / יחידות]?
+
+2. *[ID]* [Description] ([Category])
+   ← כמה [unit]?
+...
+
+💰 פריטים לתמחור ידני ([N_C] פריטים):
+
+1. *[ID]* [Description] ([Category])
    הערות: [Notes]
 
-2. [ID] [Description] ([Category])
-   הערות: [Notes]
+2. *[ID]* [Description] ([Category])
 ...
 
 עבור כל פריט, אנא ספק:
 • עלות (מחיר שלך)
 • מחיר ללקוח
-
 פריטים שלא ניתן לתמחר כרגע — אמור ״יתומחר בהמשך״.
+
+---
+
+⏳ יתומחר בהמשך ([N_A] פריטים):
+
+1. *[ID]* [Description] ([Category])
+   סיבה: [reason from Notes]
+
+2. *[ID]* [Description] ([Category])
+   סיבה: [reason]
+...
+
+פריטים אלו נשמרים עם עלות 0 ויתומחרו בהמשך.
 ```
+
+**Section visibility**: omit any group section (including header) if it has 0 items. Order always: B → C → A.
 
 ---
 

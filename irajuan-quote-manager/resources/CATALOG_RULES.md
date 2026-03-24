@@ -94,13 +94,56 @@ Per-item calculation:
 
 ## "יתומחר בהמשך" — To Be Priced Later
 
-When a contractor marks an item as **"יתומחר בהמשך"**:
+When an item is marked as **"יתומחר בהמשך"** (by the contractor, or auto-detected by the agent in BOQ mode):
 
 1. **Skip catalog matching** — do not call `get_catalog_candidates` for this item
-2. **Insert with zero costs** — call `scan_room` with `unit_cost: 0`, `unit_client_price: 0`
+2. **Insert with zero costs** — `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`
 3. **Unit = "קומפלט"** — always set unit to "קומפלט" for these items
 4. **Never add to catalog** — do NOT call `update_catalog`. This item stays out of the catalog even when prices are provided later
-5. **When contractor later provides prices** → update the room item via `replace_room_items` with the actual prices, keeping unit as "קומפלט". Still no `update_catalog`
+5. **When contractor later provides prices**:
+   - Manual mode: update the room item via `replace_room_items` with the actual prices, keeping unit as "קומפלט"
+   - BOQ mode: update via `update_or_create_with_boq` with the actual prices
+   - Still no `update_catalog` in either mode
+
+---
+
+## Catalog-Resolvable Komplet Items (BOQ Mode)
+
+Some BOQ items arrive as "קומפלט" not because they are lump-sum work, but because the BOQ didn't specify quantities. These describe standard catalog work and can be resolved through catalog matching once a quantity is provided.
+
+### Identification
+
+The agent analyzes Description to determine if it describes work that exists in the catalog under a measurable unit. Signals:
+- Description contains a recognizable work type: חיפוי (tiling), ריצוף (flooring), פרקט (parquet), צביעה (painting), גבס (drywall), שפכטל (plastering), דלתות (doors), ברזים (faucets), נקודות חשמל (electrical points), etc.
+- The work would naturally be priced per unit in the catalog, not as קומפלט
+- The only reason it's קומפלט is missing quantity information
+
+When uncertain whether an item is catalog-resolvable → default to manual pricing (Group C). Don't force catalog matching on items that don't clearly fit.
+
+### Quantity Resolution
+
+1. **Quantity in Description** — extract directly (e.g., "החלפת 3 דלתות" → 3). No need to ask.
+2. **Quantity missing** — ask contractor with the expected unit:
+   - Area work (חיפוי, ריצוף, פרקט) → ask for מ"ר
+   - Linear work (צנרת, אדנים) → ask for מטר
+   - Unit work (דלתות, ברזים, נקודות חשמל) → ask for count (יחידות)
+
+### Catalog Matching
+
+After obtaining quantity, resolve through the standard catalog flow:
+1. `get_catalog_candidates(items="[description]")` — same as not_komplet items
+2. Apply Step 2 selection rules: high similarity auto-pick, paint tiers, ambiguous → ask contractor, no match → ask contractor
+3. Enrich item with: `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
+
+### Fallback
+
+If catalog matching fails (no suitable candidate, contractor rejects all options) → treat as manual-pricing komplet item: revert to unit="קומפלט", Quantity=1, ask contractor for lump-sum pricing.
+
+### Important
+
+- Item's `Unit` changes from "קומפלט" to the catalog unit (e.g., "מ"ר") on successful match
+- Item's `Quantity` changes from 1 to the actual quantity
+- These items get `_isCompleted: true`, `Status: "Priced"` after successful matching
 
 ---
 

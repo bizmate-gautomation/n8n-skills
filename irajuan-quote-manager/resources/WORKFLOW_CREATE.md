@@ -117,13 +117,60 @@ When contractor provides a BOQ file (Excel/PDF):
    - Each item has: `{_sheet_name, _sheet_index, _excel_row, Category, ID, Description, Unit, Quantity, Status, Notes}`
    - **Note**: `_excel_row` is the unique identifier. `ID` values can be duplicated across items.
 
-5. **Process komplet items**:
-   - Set `Quantity: 1` for all komplet items (unit is "קומפלט")
-   - Show komplet items to contractor using BOQ Komplet Items Pricing Request template
-   - Include Notes for context (some notes indicate item can't be priced yet)
-   - Ask contractor to provide `unit_cost` (עלות) and `unit_client_price` (מחיר ללקוח) for each
-   - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
-   - Items contractor cannot price → `unit_cost: 0`, `unit_client_price: 0`, keep `_isCompleted: false`, `Status: "Pending Quote"`
+5. **Process komplet items** — sub-classify into 3 groups, then present in one message:
+
+   **Step 5a: Classify each komplet item**
+
+   For each komplet item, analyze `Notes` and `Description` to assign to a group. Apply in order — first match wins. **When uncertain, default to Group C** (show to contractor).
+
+   **Group A — Auto "יתומחר בהמשך"** (can't be priced now):
+   Identify items whose Notes or Description indicate pricing is not possible yet. Use judgment — look for signals such as:
+   - Explicit deferral: "יתומחר בנפרד", "יתומחר בהמשך", "יתומחר לאחר..."
+   - Can't price: "לא ניתן לתמחר", "לא יכולים לתמחר"
+   - Missing info: "עוד לא הוחלט", "אין כמות", "אין עוד כמות", "לא ידוע"
+   - Dependencies: "אחרי סיום הריסות", "אחרי בחירת...", "תלוי ב..."
+   - Explicit exclusion: "לא קומפלט", "לא כלול"
+   - Any other context that means "we don't have enough information to price this"
+
+   Do NOT pattern-match blindly — use contextual understanding. E.g., "לא ניתן לתמחר בצורה חלקית, תמחור מלא יהיה אחרי סיום הריסות" → Group A (overall meaning: can't price now).
+
+   Treatment: `Quantity: 1`, `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`, unit stays "קומפלט". No catalog lookup, no contractor question.
+
+   **Group B — Catalog-resolvable** (standard work, just needs quantity):
+   Identify items whose Description describes standard construction work that likely exists in the catalog but is marked "קומפלט" only because the BOQ didn't specify an exact quantity. Signals:
+   - Description mentions a recognizable catalog work type (חיפוי, ריצוף, פרקט, צביעה, גבס, שפכטל, אינסטלציה, דלתות, ברזים, etc.)
+   - The work is inherently measurable (per מ"ר, מטר, or יחידה)
+   - Notes do NOT indicate the item can't be priced (was not classified Group A)
+
+   Examples:
+   - "חיפוי קירות במטבחון בקרמיקה" → tiling, priced per מ"ר → ask for מ"ר
+   - "התקנת פרקט בסלון" → flooring, per מ"ר → ask for מ"ר
+   - "החלפת 3 דלתות פנים" → doors, per יחידה → quantity=3 already in description
+   - "הארכת נקודות חשמל" → electrical points, per יחידה → ask how many
+   - "צביעת דלת מילוט קיימת+משקוף" → painting, per יחידה → quantity=1 (one door+frame)
+
+   If quantity is embedded in Description (e.g., "3 דלתות"), extract it — no need to ask.
+
+   Treatment: ask contractor for missing quantity → `get_catalog_candidates` → match using CATALOG_RULES.md rules → enrich with catalog pricing. On successful match: `_isCompleted: true`, `Status: "Priced"`. **Unit changes** from "קומפלט" to catalog unit (e.g., "מ"ר"), **Quantity changes** from 1 to actual. If catalog match fails → fall back to Group C treatment.
+
+   **Group C — True manual pricing** (everything else):
+   All remaining komplet items.
+   Treatment: `Quantity: 1`, unit: "קומפלט". Ask contractor for `unit_cost` and `unit_client_price`. Priced → `_isCompleted: true`, `Status: "Priced"`. Contractor says "יתומחר בהמשך" → Group A treatment.
+
+   **Step 5b: Present to contractor in one structured message**
+
+   Use the **BOQ Komplet Items Pricing Request** template (TEMPLATES.md). One message with all groups:
+   1. Group B items — asking for quantities/measurements
+   2. Group C items — asking for unit_cost + unit_client_price
+   3. Group A items — FYI, no action needed
+   If a group has 0 items, omit its section entirely.
+   If ALL items are Group A (no contractor input needed), show the Group A FYI section and proceed directly to step 6 — skip step 5c.
+
+   **Step 5c: Process contractor's response**
+
+   - Group B: take quantities → `get_catalog_candidates` (batch, pipe-separated). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Match per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). Failed matches → ask contractor for manual pricing (Group C fallback).
+   - Group C: apply contractor-provided prices. Items marked "יתומחר בהמשך" by contractor → Group A treatment.
+   - Group A: already handled, no processing needed.
 
 6. **Process not_komplet items**:
    - **Extract quantity** from Unit string (e.g., "כ-90 מ\"ר" → Quantity=90, "5 יח'" → Quantity=5)
@@ -134,7 +181,12 @@ When contractor provides a BOQ file (Excel/PDF):
    - Enrich each item with: `catalog_id`, `unit_cost`, `unit_client_price`, updated `Quantity`
    - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
 
-7. Build the full items array: take the `all` array, enrich each item with the pricing data and extracted quantities gathered in steps 5-6 (matched by `_excel_row`)
+7. Build the full items array: take the `all` array, enrich each item (matched by `_excel_row`) with data from steps 5-6:
+   - Group A komplet items: `unit_cost: 0`, `unit_client_price: 0`, `Quantity: 1`, `_isCompleted: false`, `Status: "Pending Quote"`
+   - Group B komplet items (catalog-matched): `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog — replaces "קומפלט"), `_isCompleted: true`, `Status: "Priced"`
+   - Group B komplet items (fallback to C): same as Group C
+   - Group C komplet items: `unit_cost`, `unit_client_price`, `Quantity: 1`, `Unit: "קומפלט"`, `_isCompleted: true`, `Status: "Priced"`
+   - Not_komplet items: `catalog_id`, `unit_cost`, `unit_client_price`, extracted `Quantity`, `_isCompleted: true`, `Status: "Priced"`
 
 8. Show complete summary of all items with pricing to contractor for confirmation
 
