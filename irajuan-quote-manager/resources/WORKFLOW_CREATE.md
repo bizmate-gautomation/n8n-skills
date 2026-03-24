@@ -107,30 +107,44 @@ For each room:
 
 When contractor provides a BOQ file (Excel/PDF):
 
-1. `create_boq(name, projectId, leadId, fileUrl)` — store BOQ record in Airtable
-2. `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before parsing
-3. `parse_boq(document_id)` — parse file, returns flat list: `[{Category, Description, Quantity, Unit}, ...]`
-4. Group items by `Category` — each unique Category becomes a room (roomName = Category)
-5. `progress_update("⏳ מתאים פריטים לקטלוג...")` — notify contractor before batch matching
-6. Collect all `Description` values across all rooms → `get_catalog_candidates(items="desc1|desc2|desc3|...")`
-7. Claude matches each item to catalog (same rules as Step 3a)
-8. If 3+ rooms: `progress_update("⏳ יוצר חדרים בפרויקט...")` — notify before room loop
-9. For each room/Category: `scan_room(projectId, roomName=Category, items=[{name=Description, qty=Quantity, unit=Unit, catalog_id, unit_cost, unit_client_price}], offerType="BOQ")`
-10. Show parsed rooms summary:
+1. Agent receives: drive file ID, file name, file URL
+2. `create_boq_record(boq_name=file_name, boq_projectId=projectId, boq_leadId=leadId, boq_fileUrl=fileUrl)` — store BOQ record in Airtable
+3. `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before parsing
+4. `parse_boq(boq_document_id=drive_file_id)` — returns:
+   - `komplet`: items with unit "קומפלט" → need manual pricing from contractor
+   - `not_komplet`: items with measurable units → go through catalog matching
+   - `all`: merged sorted list (by _excel_row) of all items
+   - Each item has: `{_sheet_name, _sheet_index, _excel_row, Category, ID, Description, Unit, Quantity, Status, Notes}`
+   - **Note**: `_excel_row` is the unique identifier. `ID` values can be duplicated across items.
 
-```
-"כתב הכמויות נקלט. נמצאו [N] חדרים:
-• [room1] — [X] פריטים
-• [room2] — [Y] פריטים
-...
-סה"כ [total] פריטים. האם הכל נראה תקין?"
-```
+5. **Process komplet items**:
+   - Set `Quantity: 1` for all komplet items (unit is "קומפלט")
+   - Show komplet items to contractor using BOQ Komplet Items Pricing Request template
+   - Include Notes for context (some notes indicate item can't be priced yet)
+   - Ask contractor to provide `unit_cost` (עלות) and `unit_client_price` (מחיר ללקוח) for each
+   - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
+   - Items contractor cannot price → `unit_cost: 0`, `unit_client_price: 0`, keep `_isCompleted: false`, `Status: "Pending Quote"`
 
-11. Let contractor review and correct if needed
+6. **Process not_komplet items**:
+   - **Extract quantity** from Unit string (e.g., "כ-90 מ\"ר" → Quantity=90, "5 יח'" → Quantity=5)
+   - `progress_update("⏳ מתאים פריטים לקטלוג...")` (if 5+ items)
+   - `get_catalog_candidates(items="desc1|desc2|...")` — pipe-separated Description values
+   - Claude matches each item to catalog (same rules as Step 3a in CATALOG_RULES.md)
+   - Unmatched → ask contractor: Google search or manual pricing → `update_catalog` → get catalog_id
+   - Enrich each item with: `catalog_id`, `unit_cost`, `unit_client_price`, updated `Quantity`
+   - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
+
+7. Build the full items array: take the `all` array, enrich each item with the pricing data and extracted quantities gathered in steps 5-6 (matched by `_excel_row`)
+
+8. Show complete summary of all items with pricing to contractor for confirmation
+
+→ Continue to Step 5-BOQ
 
 ---
 
-## Step 4: Review (סקירה)
+## Step 4: Review (סקירה) — Manual Mode Only
+
+> **Note:** Step 4 applies to manual mode only. BOQ mode skips directly to Step 5-BOQ.
 
 1. `get_project_rooms(projectId)` — fetch all rooms with items
 2. Display complete summary — all rooms, all items, quantities, units, prices
@@ -139,7 +153,7 @@ When contractor provides a BOQ file (Excel/PDF):
    - **Add items to existing room** → `scan_room` returns `room_exists` with current items → merge → `replace_room_items` with full list
    - **Corrections** → describe changes needed and handle accordingly
 
-## Step 5: Generate Quote (יצירת הצעת מחיר)
+## Step 5: Generate Quote — Manual Mode (יצירת הצעת מחיר — ללא כתב כמויות)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
 2. `create_quote(projectId, quote_type="offer")` — generate cost quote
@@ -156,6 +170,21 @@ When contractor provides a BOQ file (Excel/PDF):
 10. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId, quote_type="client")` to regenerate, show updated client quote + `driveLink` again
 11. **Only after explicit client approval** → done.
 
+## Step 5-BOQ: Generate Quote — BOQ Mode (יצירת הצעת מחיר — כתב כמויות)
+
+1. `update_or_create_with_boq(project_id, offer_type="cost", updates_or_create=[...all items with pricing...])` — save all items for cost offer
+2. `progress_update("⏳ מכין הצעת מחיר...")`
+3. `create_boq_tool(project_id, offer_type="cost", document_id=drive_file_id)` — generate cost quote → returns drive link
+4. Show internal cost summary to contractor (Internal Cost Summary template)
+5. Show the cost quote drive link (BOQ Cost quote created template)
+6. Ask contractor to review and approve costs
+7. **If contractor wants corrections** → Offer Correction sub-flow (use `create_boq_tool` to regenerate instead of `create_quote`) → return to step 1
+8. **After explicit cost approval** → `update_or_create_with_boq(project_id, offer_type="client", updates_or_create=[...same items...])` — save items for client offer
+9. `create_boq_tool(project_id, offer_type="client", document_id=drive_file_id)` — generate client quote → returns drive link
+10. Show client quote + drive link (BOQ Client quote created template)
+11. Same correction/approval cycle for client quote
+12. Done after explicit client approval
+
 ### Offer Correction (תיקון הצעה)
 
 When contractor identifies rows to correct after reviewing either offer:
@@ -169,5 +198,8 @@ When contractor identifies rows to correct after reviewing either offer:
    c. `update_offer_json({project_id, offer_type, updates: [{rowNum, quantity?, unit_cost?, total_cost?}]})` — patch only changed fields. Always include computed `total_cost` when changing quantity or unit_cost
    d. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — verify changes applied; show updated values. If mismatch → report to contractor and retry
 5. `progress_update("⏳ מכין הצעת מחיר...")` — before regeneration
-6. `create_quote(projectId, quote_type)` — regenerate the relevant document, show updated `driveLink`
+6. **Regenerate** — depends on mode:
+   - Manual mode: `create_quote(projectId, quote_type)` — regenerate the relevant document
+   - BOQ mode: `create_boq_tool(project_id, offer_type, document_id)` — regenerate the relevant document
+7. Show updated `driveLink`
 

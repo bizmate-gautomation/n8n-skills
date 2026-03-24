@@ -61,6 +61,18 @@
 📄 הצעת מחיר ללקוח: [driveLink from create_quote with quote_type="client"]
 ```
 
+**BOQ Cost quote created:**
+```
+✅ הצעת מחיר עלות מכתב כמויות נוצרה!
+📄 הצעת מחיר עלות: [driveLink]
+```
+
+**BOQ Client quote created:**
+```
+✅ הצעת מחיר ללקוח מכתב כמויות נוצרה!
+📄 הצעת מחיר ללקוח: [driveLink]
+```
+
 **Lead created:**
 ```
 ✅ ליד חדש נוצר: [name] ([phone])
@@ -130,6 +142,42 @@ After update + verify:
 
 ---
 
+## BOQ Komplet Items Pricing Request
+
+```
+נמצאו [N] פריטי קומפלט שדורשים תמחור ידני:
+
+1. [ID] [Description] ([Category])
+   הערות: [Notes]
+
+2. [ID] [Description] ([Category])
+   הערות: [Notes]
+...
+
+עבור כל פריט, אנא ספק:
+• עלות (מחיר שלך)
+• מחיר ללקוח
+
+פריטים שלא ניתן לתמחר כרגע — אמור ״יתומחר בהמשך״.
+```
+
+---
+
+## BOQ Not-Komplet Items Summary
+
+```
+נמצאו [N] פריטים עם כמויות — מתאים לקטלוג:
+
+1. [ID] [Description] — [Unit]
+   התאמה: [catalog_match_name] (דמיון: [score])
+
+2. [ID] [Description] — [Unit]
+   התאמה: לא נמצא — נדרש תמחור ידני
+...
+```
+
+---
+
 ## Progress Messages (הודעות התקדמות — sent to contractor via progress_update)
 
 Use these messages with `progress_update` during long operations. Send BEFORE the operation starts.
@@ -157,6 +205,11 @@ Use these messages with `progress_update` during long operations. Send BEFORE th
 ### Quote Generation
 ```
 ⏳ מכין הצעת מחיר...
+```
+
+### BOQ Items Save
+```
+⏳ שומר נתוני כתב כמויות...
 ```
 
 ### Offer Correction (עדכון שורות)
