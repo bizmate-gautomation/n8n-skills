@@ -113,10 +113,12 @@ Some BOQ items arrive as "קומפלט" not because they are lump-sum work, but 
 
 ### Identification
 
-The agent analyzes Description to determine if it describes work that exists in the catalog under a measurable unit. Signals:
-- Description contains a recognizable work type: חיפוי (tiling), ריצוף (flooring), פרקט (parquet), צביעה (painting), גבס (drywall), שפכטל (plastering), דלתות (doors), ברזים (faucets), נקודות חשמל (electrical points), etc.
+The agent analyzes Description to determine if it describes **common, standard** construction work that exists in the catalog under a measurable unit. Signals:
+- Description contains a recognizable **standard** work type: חיפוי (tiling), ריצוף (flooring), פרקט (parquet), צביעה (painting), גבס (drywall), שפכטל (plastering), דלתות פנים (interior doors), ברזים (faucets), נקודות חשמל (electrical points), etc.
 - The work would naturally be priced per unit in the catalog, not as קומפלט
 - The only reason it's קומפלט is missing quantity information
+
+**Not catalog-resolvable** — specialty/custom work goes to Group C: custom glass (מחיצות זכוכית, דלתות זכוכית), custom carpentry (נגרות אומן), signage (שילוטים), fire/safety systems (ספרינקלרים, גלאי עשן), HVAC systems, multi-trade composites.
 
 When uncertain whether an item is catalog-resolvable → default to manual pricing (Group C). Don't force catalog matching on items that don't clearly fit.
 

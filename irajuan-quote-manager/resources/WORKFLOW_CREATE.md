@@ -123,6 +123,8 @@ When contractor provides a BOQ file (Excel/PDF):
 
    For each komplet item, analyze `Notes` and `Description` to assign to a group. Apply in order — first match wins. **When uncertain, default to Group C** (show to contractor).
 
+   Only classify items from the `komplet` array returned by `parse_boq`. Never include `not_komplet` items in this classification. **Sanity check**: Group A count + Group B count + Group C count must equal `komplet` array length. If it doesn't, re-classify before presenting.
+
    **Group A — Auto "יתומחר בהמשך"** (can't be priced now):
    Identify items whose Notes or Description indicate pricing is not possible yet. Use judgment — look for signals such as:
    - Explicit deferral: "יתומחר בנפרד", "יתומחר בהמשך", "יתומחר לאחר..."
@@ -137,10 +139,18 @@ When contractor provides a BOQ file (Excel/PDF):
    Treatment: `Quantity: 1`, `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`, unit stays "קומפלט". No catalog lookup, no contractor question.
 
    **Group B — Catalog-resolvable** (standard work, just needs quantity):
-   Identify items whose Description describes standard construction work that likely exists in the catalog but is marked "קומפלט" only because the BOQ didn't specify an exact quantity. Signals:
-   - Description mentions a recognizable catalog work type (חיפוי, ריצוף, פרקט, צביעה, גבס, שפכטל, אינסטלציה, דלתות, ברזים, etc.)
+   Identify items whose Description describes **common, standard** construction work that a typical renovation contractor's catalog would contain — but is marked "קומפלט" only because the BOQ didn't specify an exact quantity. Signals:
+   - Description mentions a recognizable **standard** catalog work type (חיפוי, ריצוף, פרקט, צביעה, גבס, שפכטל, דלתות פנים, ברזים, נקודות חשמל, etc.)
    - The work is inherently measurable (per מ"ר, מטר, or יחידה)
    - Notes do NOT indicate the item can't be priced (was not classified Group A)
+
+   **NOT Group B** — these are specialty/custom work, send to Group C:
+   - Custom glass (מחיצות זכוכית, דלתות זכוכית, חלונות מיוחדים)
+   - Custom carpentry/millwork (נגרות אומן, דלפקים, ארונות מיוחדים)
+   - Signage & branding (שילוטים, באנרים, גרפיטי)
+   - Fire/safety systems (ספרינקלרים, גלאי עשן, הידרנט, כריזה)
+   - HVAC/mechanical systems (מערכות מיזוג, בקרת כניסה)
+   - Multi-trade composite items (combining several different trades in one item)
 
    Examples:
    - "חיפוי קירות במטבחון בקרמיקה" → tiling, priced per מ"ר → ask for מ"ר
