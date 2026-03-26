@@ -218,7 +218,7 @@ When contractor provides a BOQ file (Excel/PDF):
 ## Step 5: Generate Quote — Manual Mode (יצירת הצעת מחיר — ללא כתב כמויות)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
-2. `create_quote(projectId, quote_type="offer")` — generate cost quote
+2. `create_quote(projectId, quote_type="cost")` — generate cost quote
 3. Show internal cost summary to contractor (use Internal Cost Summary template from TEMPLATES.md) — includes עלות, מחיר ללקוח, and רווח
 4. Show the cost quote `driveLink` immediately (use **Cost quote created** template from TEMPLATES.md)
 5. Ask contractor to review and approve the costs:
