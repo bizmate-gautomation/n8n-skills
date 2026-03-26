@@ -52,14 +52,14 @@ Ask in **one prompt**:
 1. Parse the contractor's description into item names
 2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
 3. If 5+ non-"יתומחר בהמשך" items → `progress_update("⏳ מחפש פריטים בקטלוג...")` before catalog search
-4. For all other items: `get_catalog_candidates(items="צביעה|לוח חשמל|...")` — get candidates per item
-5. Claude matches each item (see [CATALOG_RULES.md](CATALOG_RULES.md)):
-   - High similarity (≥0.8) with clear gap → auto-pick
-   - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
+4. For all other items: `SearchStore(query="מצא מחירים עבור: צביעה דירה X חדרים, לוח חשמל, ...")` — query with natural language and project context
+5. Claude extracts pricing from response (see [CATALOG_RULES.md](CATALOG_RULES.md)):
+   - Extract cost, client price, unit from response text → auto-pick
+   - Paint items → include room count in query, extract correct tier
    - SQM items → use room sqm as quantity
-   - Ambiguous → ask contractor to choose from candidates
-   - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
-6. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
+   - Ambiguous/multiple ranges → ask contractor to choose
+   - No relevant pricing → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog`
+6. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, unit_cost, unit_client_price}], offerType="withoutBOQ")`
 7. Show created items for confirmation (use Room Parsed template from TEMPLATES.md)
 8. If contractor says none → skip to Step 3b
 
@@ -75,8 +75,8 @@ Ask in **one prompt**:
 
 1. Parse the contractor's description into item names
 2. **"יתומחר בהמשך" items** → skip catalog, add with 0 costs and unit "קומפלט" (same as Step 3a)
-3. For all other items: `get_catalog_candidates(items="...")` → match to catalog
-4. Claude picks best match per item (same rules as Step 3a)
+3. For all other items: `SearchStore(query="...")` → extract pricing from response
+4. Claude extracts pricing per item (same rules as Step 3a)
 5. Call `scan_room(projectId, roomName="עבודות מיוחדות", items=[...], offerType="withoutBOQ")`
 6. Show created items for confirmation
 7. If none → skip to Step 3c
@@ -93,9 +93,9 @@ For each room:
 
 1. Parse room description into item names
 2. **"יתומחר בהמשך" items** → skip catalog, add with 0 costs and unit "קומפלט" (same as Step 3a)
-3. For all other items: `get_catalog_candidates(items="פרקט|שפכטל|...")` → get candidates
-4. Claude matches each item to catalog (same rules as Step 3a)
-5. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
+3. For all other items: `SearchStore(query="מצא מחירים עבור: פרקט, שפכטל, ...")` → extract pricing from response
+4. Claude extracts pricing per item (same rules as Step 3a)
+5. `scan_room(projectId, roomName, items=[{name, qty, unit, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
 6. Show created result using Room Parsed template
 7. Let contractor confirm or correct
 8. Ask: "יש חדר נוסף?"
@@ -161,7 +161,7 @@ When contractor provides a BOQ file (Excel/PDF):
 
    If quantity is embedded in Description (e.g., "3 דלתות"), extract it — no need to ask.
 
-   Treatment: ask contractor for missing quantity → `get_catalog_candidates` → match using CATALOG_RULES.md rules → enrich with catalog pricing. On successful match: `_isCompleted: true`, `Status: "Priced"`. **Unit changes** from "קומפלט" to catalog unit (e.g., "מ"ר"), **Quantity changes** from 1 to actual. If catalog match fails → fall back to Group C treatment.
+   Treatment: ask contractor for missing quantity → `SearchStore(query="...")` → extract pricing using CATALOG_RULES.md rules → enrich with catalog pricing. On successful match: `_isCompleted: true`, `Status: "Priced"`. **Unit changes** from "קומפלט" to catalog unit (e.g., "מ"ר"), **Quantity changes** from 1 to actual. If SearchStore returns no clear pricing → fall back to Group C treatment.
 
    **Group C — True manual pricing** (everything else):
    All remaining komplet items.
@@ -178,25 +178,25 @@ When contractor provides a BOQ file (Excel/PDF):
 
    **Step 5c: Process contractor's response**
 
-   - Group B: take quantities → `get_catalog_candidates` (batch, pipe-separated). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Match per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). Failed matches → ask contractor for manual pricing (Group C fallback).
+   - Group B: take quantities → `SearchStore(query="...")` (batch in natural language). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Extract pricing per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). No clear pricing → ask contractor for manual pricing (Group C fallback).
    - Group C: apply contractor-provided prices. Items marked "יתומחר בהמשך" by contractor → Group A treatment.
    - Group A: already handled, no processing needed.
 
 6. **Process not_komplet items**:
    - **Extract quantity** from Unit string (e.g., "כ-90 מ\"ר" → Quantity=90, "5 יח'" → Quantity=5)
    - `progress_update("⏳ מתאים פריטים לקטלוג...")` (if 5+ items)
-   - `get_catalog_candidates(items="desc1|desc2|...")` — pipe-separated Description values
-   - Claude matches each item to catalog (same rules as Step 3a in CATALOG_RULES.md)
-   - Unmatched → ask contractor: Google search or manual pricing → `update_catalog` → get catalog_id
-   - Enrich each item with: `catalog_id`, `unit_cost`, `unit_client_price`, updated `Quantity`
+   - `SearchStore(query="מצא מחירים עבור: desc1, desc2, ...")` — batch in natural language
+   - Claude extracts pricing per item from response (same rules as Step 3a in CATALOG_RULES.md)
+   - No relevant pricing → ask contractor: Google search or manual pricing → `update_catalog`
+   - Enrich each item with: `unit_cost`, `unit_client_price`, updated `Quantity`
    - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
 
 7. Build the full items array: take the `all` array, enrich each item (matched by `_excel_row`) with data from steps 5-6:
    - Group A komplet items: `unit_cost: 0`, `unit_client_price: 0`, `Quantity: 1`, `_isCompleted: false`, `Status: "Pending Quote"`
-   - Group B komplet items (catalog-matched): `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog — replaces "קומפלט"), `_isCompleted: true`, `Status: "Priced"`
+   - Group B komplet items (catalog-matched): `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from SearchStore response — replaces "קומפלט"), `_isCompleted: true`, `Status: "Priced"`
    - Group B komplet items (fallback to C): same as Group C
    - Group C komplet items: `unit_cost`, `unit_client_price`, `Quantity: 1`, `Unit: "קומפלט"`, `_isCompleted: true`, `Status: "Priced"`
-   - Not_komplet items: `catalog_id`, `unit_cost`, `unit_client_price`, extracted `Quantity`, `_isCompleted: true`, `Status: "Priced"`
+   - Not_komplet items: `unit_cost`, `unit_client_price`, extracted `Quantity`, `_isCompleted: true`, `Status: "Priced"`
 
 8. Show complete summary of all items with pricing to contractor for confirmation
 
@@ -211,7 +211,7 @@ When contractor provides a BOQ file (Excel/PDF):
 1. `get_project_rooms(projectId)` — fetch all rooms with items
 2. Display complete summary — all rooms, all items, quantities, units, prices
 3. Let contractor make corrections:
-   - **Add new room** → match items with `get_catalog_candidates` → `scan_room` with pricing
+   - **Add new room** → match items with `SearchStore` → `scan_room` with pricing
    - **Add items to existing room** → `scan_room` returns `room_exists` with current items → merge → `replace_room_items` with full list
    - **Corrections** → describe changes needed and handle accordingly
 

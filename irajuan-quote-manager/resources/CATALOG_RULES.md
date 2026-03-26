@@ -2,20 +2,30 @@
 
 ## Matching Algorithm
 
-Claude performs catalog matching using `get_catalog_candidates` results. For each item, Claude receives the top 3 candidates with similarity scores, costs, and hints.
+Claude performs catalog matching using `SearchStore` (Google Gemini File Search). The RAG store contains catalog data with pricing knowledge. Claude queries it with natural language and extracts structured pricing from the free-text response.
 
-### Step 1: Get Candidates
-- Call `get_catalog_candidates(items="פריט1|פריט2|...")` with pipe-separated item names
-- Returns top 3 catalog candidates per item, ranked by `GREATEST(similarity(), word_similarity())` using `pg_trgm`
+### Step 1: Query SearchStore
+- Call `SearchStore(query="natural language item description")` — can include multiple items in one query
+  - **Small batches (≤5 items)**: combine in one query for efficiency
+  - **Large batches (>5 items)**: split into multiple calls to keep responses focused
+- **Query formulation guidance:**
+  - Use natural language, not pipe-separated syntax
+  - Paint items: include room count → `"צביעת דירה 5 חדרים"`
+  - SQM items: include area context → `"ריצוף 40 מ״ר"`
+  - Tiered items: include project size → `"לוח חשמל דירה 4 חדרים"`
+  - Multi-item: `"מצא מחירים עבור: צביעת דירה 5 חדרים, פרקט למינציה, שפכטל שתי ידיים"`
 
-### Step 2: Claude Selects Best Match
-For each item, apply these rules in order:
+### Step 2: Extract Pricing from Response
+For each item, extract from the response text:
+1. **cost (עלות)** — contractor's actual cost per unit
+2. **cost_for_client (מחיר ללקוח)** — client-facing price per unit
+3. **unit** — pricing unit (יחידה / מטר / מ״ר / קומפלט)
+4. **notes** — relevant conditions, tier info, considerations
 
-1. **High similarity auto-pick**: Top score ≥ 0.8 AND gap to second candidate ≥ 0.15 → select top candidate
-2. **Paint items** → select by project room count tier (see Paint Item Logic below)
-3. **Tiered items** (have `minRooms`/`maxRooms` or `hint`) → use hint + project context to select correct tier
-4. **Ambiguous** (multiple close candidates) → ask contractor to choose
-5. **No match** (top score < 0.4 or irrelevant candidates) → ask contractor:
+Then apply:
+- **Auto-pick** — extract and use the pricing directly
+- **Ambiguous/multiple ranges** → ask contractor to choose
+- **No relevant pricing in response** → ask contractor:
    ```
    "הפריט '[item name]' לא נמצא בקטלוג. מה תעדיף?
    1. לחפש מחירים בגוגל
@@ -23,7 +33,7 @@ For each item, apply these rules in order:
    ```
    - **Option 1 (Google search)**: Use `WebSearch` to search for the item (e.g. "מחיר [item name] שיפוצים"). Show top results with links to the contractor. Contractor reviews and provides final pricing based on findings.
    - **Option 2 (Manual)**: Ask contractor for cost (עלות) and client price (מחיר ללקוח).
-   - After getting prices either way → `update_catalog` → use returned catalog_id
+   - After getting prices either way → `update_catalog`
 
 ---
 
@@ -31,11 +41,10 @@ For each item, apply these rules in order:
 
 Paint items require special handling:
 
-1. **Never auto-matched** — always check room tier even if similarity is high
+1. **Include room count in query** — e.g. `SearchStore(query="צביעת דירה 5 חדרים")` → extract correct tier pricing from response
 2. **Priced as קומפלט** (complete package) based on total rooms count
 3. **Tiered catalog entries**: "צביעת קירות — דירה 4 חדרים", "צביעת קירות — דירה 5 חדרים"
-4. **Selection uses** `minRooms`/`maxRooms` from candidates — pick the tier matching project room count
-5. **Deduplication**: if global room ("כללי") has a paint item → room-level paint items are suppressed
+4. **Deduplication**: if global room ("כללי") has a paint item → room-level paint items are suppressed
 
 ---
 
@@ -49,17 +58,10 @@ Paint items require special handling:
 
 ## Tiered Pricing
 
-Catalog supports conditional selection via these columns:
+Some catalog items have tiered pricing based on project size (room count, sqm). The tier information is embedded in the RAG store text.
 
-| Column | Purpose |
-|--------|---------|
-| `ai_selection_hint` | Free-text instruction for when to select this item |
-| `min_rooms` | Minimum room count for this tier |
-| `max_rooms` | Maximum room count for this tier |
-| `min_sqm` | Minimum project sqm for this tier |
-| `max_sqm` | Maximum project sqm for this tier |
-
-Claude uses project context (room count, sqm) to pick the right tier from candidates.
+- **Include project context in query** — e.g. `SearchStore(query="לוח חשמל דירה 4 חדרים")` or `SearchStore(query="ריצוף 80 מ״ר")`
+- Agent extracts the correct tier from the response text based on the project's room count and sqm
 
 ---
 
@@ -96,7 +98,7 @@ Per-item calculation:
 
 When an item is marked as **"יתומחר בהמשך"** (by the contractor, or auto-detected by the agent in BOQ mode):
 
-1. **Skip catalog matching** — do not call `get_catalog_candidates` for this item
+1. **Skip catalog matching** — do not call `SearchStore` for this item
 2. **Insert with zero costs** — `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`
 3. **Unit = "קומפלט"** — always set unit to "קומפלט" for these items
 4. **Never add to catalog** — do NOT call `update_catalog`. This item stays out of the catalog even when prices are provided later
@@ -133,9 +135,9 @@ When uncertain whether an item is catalog-resolvable → default to manual prici
 ### Catalog Matching
 
 After obtaining quantity, resolve through the standard catalog flow:
-1. `get_catalog_candidates(items="[description]")` — same as not_komplet items
-2. Apply Step 2 selection rules: high similarity auto-pick, paint tiers, ambiguous → ask contractor, no match → ask contractor
-3. Enrich item with: `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
+1. `SearchStore(query="[description with context]")` — same as not_komplet items
+2. Extract pricing from response: auto-pick, ambiguous → ask contractor, no match → ask contractor
+3. Enrich item with: `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
 
 ### Fallback
 

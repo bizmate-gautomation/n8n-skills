@@ -194,7 +194,7 @@ After update + verify:
 נמצאו [N] פריטים עם כמויות — מתאים לקטלוג:
 
 1. [ID] [Description] — [Unit]
-   התאמה: [catalog_match_name] (דמיון: [score])
+   התאמה: [catalog_match_name] — עלות: ₪[cost], ללקוח: ₪[client_price]
 
 2. [ID] [Description] — [Unit]
    התאמה: לא נמצא — נדרש תמחור ידני
