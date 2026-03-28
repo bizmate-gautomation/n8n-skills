@@ -42,7 +42,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 |------|---------|------------|
 | `create_boq_record` | Create BOQ record in Airtable | `{boq_name*, boq_projectId?, boq_leadId?, boq_fileUrl*}` |
 | `parse_boq` | Parse BOQ file into komplet/not_komplet split | `{boq_document_id}` → returns `{komplet: [...], not_komplet: [...], all: [...]}`. Each item: `{_sheet_name, _sheet_index, _excel_row, Category, ID, Description, Unit, Quantity, Status, Notes}` |
-| `update_or_create_with_boq` | Save all BOQ items with pricing to DB | `{project_id*, offer_type* ("cost"/"client"), updates_or_create*: [{...item fields + unit_cost, unit_client_price, _isCompleted}]}` → `{status: "ok"}` |
+| `update_or_create_with_boq` | Save all BOQ items with pricing to DB | Input is a JSON array with one object: `[{project_id*, offer_type* ("cost"/"client"), updates_or_create*: [{ID, Unit, Notes, Status, Category, Quantity, _excel_row, Description, _sheet_name, _sheet_index, _isCompleted, unit_cost, unit_client_price}]}]` → `{status: "ok"}` |
 | `create_boq_tool` | Generate BOQ quote document (Drive) | `{project_id*, offer_type* ("cost"/"client"), document_id*}` → returns drive link |
 
 ### Quote & Communication
