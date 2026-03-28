@@ -33,7 +33,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
-| `SearchStore` | RAG catalog search (Google Gemini File Search) | `{query: "natural language item description, e.g. צביעת דירה 5 חדרים"}` → returns free text (`content.parts[].text`) with pricing knowledge — agent extracts: cost (עלות), client price (מחיר ללקוח), unit, relevant notes |
+| `SearchStore` | RAG catalog search (Google Gemini File Search) | `{query: "מצא עלות ומחיר ללקוח עבור: צביעת דירה 5 חדרים"}` → returns free text (`content.parts[].text`) with pricing knowledge — agent extracts: cost (עלות), client price (מחיר ללקוח), unit, relevant notes |
 | `update_catalog` | Add new items to catalog | `{items: [{name*, type*, cost*, costForClient*, unit*, description?, aiSelectionHint?}]}` |
 
 ### BOQ (Bill of Quantities)

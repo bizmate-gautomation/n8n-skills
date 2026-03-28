@@ -52,7 +52,7 @@ Ask in **one prompt**:
 1. Parse the contractor's description into item names
 2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
 3. If 5+ non-"יתומחר בהמשך" items → `progress_update("⏳ מחפש פריטים בקטלוג...")` before catalog search
-4. For all other items: `SearchStore(query="מצא מחירים עבור: צביעה דירה X חדרים, לוח חשמל, ...")` — query with natural language and project context
+4. For all other items: `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: צביעה דירה X חדרים, לוח חשמל, ...")` — query with natural language and project context
 5. Claude extracts pricing from response (see [CATALOG_RULES.md](CATALOG_RULES.md)):
    - Extract cost, client price, unit from response text → auto-pick
    - Paint items → include room count in query, extract correct tier
@@ -93,7 +93,7 @@ For each room:
 
 1. Parse room description into item names
 2. **"יתומחר בהמשך" items** → skip catalog, add with 0 costs and unit "קומפלט" (same as Step 3a)
-3. For all other items: `SearchStore(query="מצא מחירים עבור: פרקט, שפכטל, ...")` → extract pricing from response
+3. For all other items: `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: פרקט, שפכטל, ...")` → extract pricing from response
 4. Claude extracts pricing per item (same rules as Step 3a)
 5. `scan_room(projectId, roomName, items=[{name, qty, unit, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
 6. Show created result using Room Parsed template
@@ -161,7 +161,7 @@ When contractor provides a BOQ file (Excel/PDF):
 
    If quantity is embedded in Description (e.g., "3 דלתות"), extract it — no need to ask.
 
-   Treatment: ask contractor for missing quantity → `SearchStore(query="...")` → extract pricing using CATALOG_RULES.md rules → enrich with catalog pricing. On successful match: `_isCompleted: true`, `Status: "Priced"`. **Unit changes** from "קומפלט" to catalog unit (e.g., "מ"ר"), **Quantity changes** from 1 to actual. If SearchStore returns no clear pricing → fall back to Group C treatment.
+   Treatment: ask contractor for missing quantity → `SearchStore(query="מצא עלות ומחיר ללקוח עבור: ...")` → extract pricing using CATALOG_RULES.md rules → enrich with catalog pricing. On successful match: `_isCompleted: true`, `Status: "Priced"`. **Unit changes** from "קומפלט" to catalog unit (e.g., "מ"ר"), **Quantity changes** from 1 to actual. If SearchStore returns no clear pricing → fall back to Group C treatment.
 
    **Group C — True manual pricing** (everything else):
    All remaining komplet items.
@@ -178,14 +178,14 @@ When contractor provides a BOQ file (Excel/PDF):
 
    **Step 5c: Process contractor's response**
 
-   - Group B: take quantities → `SearchStore(query="...")` (batch in natural language). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Extract pricing per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). No clear pricing → ask contractor for manual pricing (Group C fallback).
+   - Group B: take quantities → `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: ...")` (batch in natural language). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Extract pricing per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). No clear pricing → ask contractor for manual pricing (Group C fallback).
    - Group C: apply contractor-provided prices. Items marked "יתומחר בהמשך" by contractor → Group A treatment.
    - Group A: already handled, no processing needed.
 
 6. **Process not_komplet items**:
    - **Extract quantity** from Unit string (e.g., "כ-90 מ\"ר" → Quantity=90, "5 יח'" → Quantity=5)
    - `progress_update("⏳ מתאים פריטים לקטלוג...")` (if 5+ items)
-   - `SearchStore(query="מצא מחירים עבור: desc1, desc2, ...")` — batch in natural language
+   - `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: desc1, desc2, ...")` — batch in natural language
    - Claude extracts pricing per item from response (same rules as Step 3a in CATALOG_RULES.md)
    - No relevant pricing → ask contractor: Google search or manual pricing → `update_catalog`
    - Enrich each item with: `unit_cost`, `unit_client_price`, updated `Quantity`

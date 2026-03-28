@@ -5,7 +5,7 @@
 Claude performs catalog matching using `SearchStore` (Google Gemini File Search). The RAG store contains catalog data with pricing knowledge. Claude queries it with natural language and extracts structured pricing from the free-text response.
 
 ### Step 1: Query SearchStore
-- Call `SearchStore(query="natural language item description")` — can include multiple items in one query
+- Call `SearchStore(query="מצא עלות ומחיר ללקוח עבור: [item description]")` — can include multiple items in one query
   - **Small batches (≤5 items)**: combine in one query for efficiency
   - **Large batches (>5 items)**: split into multiple calls to keep responses focused
 - **Query formulation guidance:**
@@ -13,7 +13,7 @@ Claude performs catalog matching using `SearchStore` (Google Gemini File Search)
   - Paint items: include room count → `"צביעת דירה 5 חדרים"`
   - SQM items: include area context → `"ריצוף 40 מ״ר"`
   - Tiered items: include project size → `"לוח חשמל דירה 4 חדרים"`
-  - Multi-item: `"מצא מחירים עבור: צביעת דירה 5 חדרים, פרקט למינציה, שפכטל שתי ידיים"`
+  - Multi-item: `"מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: צביעת דירה 5 חדרים, פרקט למינציה, שפכטל שתי ידיים"`
 
 ### Step 2: Extract Pricing from Response
 For each item, extract from the response text:
@@ -41,7 +41,7 @@ Then apply:
 
 Paint items require special handling:
 
-1. **Include room count in query** — e.g. `SearchStore(query="צביעת דירה 5 חדרים")` → extract correct tier pricing from response
+1. **Include room count in query** — e.g. `SearchStore(query="מצא עלות ומחיר ללקוח עבור: צביעת דירה 5 חדרים")` → extract correct tier pricing from response
 2. **Priced as קומפלט** (complete package) based on total rooms count
 3. **Tiered catalog entries**: "צביעת קירות — דירה 4 חדרים", "צביעת קירות — דירה 5 חדרים"
 4. **Deduplication**: if global room ("כללי") has a paint item → room-level paint items are suppressed
@@ -60,7 +60,7 @@ Paint items require special handling:
 
 Some catalog items have tiered pricing based on project size (room count, sqm). The tier information is embedded in the RAG store text.
 
-- **Include project context in query** — e.g. `SearchStore(query="לוח חשמל דירה 4 חדרים")` or `SearchStore(query="ריצוף 80 מ״ר")`
+- **Include project context in query** — e.g. `SearchStore(query="מצא עלות ומחיר ללקוח עבור: לוח חשמל דירה 4 חדרים")` or `SearchStore(query="מצא עלות ומחיר ללקוח עבור: ריצוף 80 מ״ר")`
 - Agent extracts the correct tier from the response text based on the project's room count and sqm
 
 ---
@@ -135,7 +135,7 @@ When uncertain whether an item is catalog-resolvable → default to manual prici
 ### Catalog Matching
 
 After obtaining quantity, resolve through the standard catalog flow:
-1. `SearchStore(query="[description with context]")` — same as not_komplet items
+1. `SearchStore(query="מצא עלות ומחיר ללקוח עבור: [description with context]")` — same as not_komplet items
 2. Extract pricing from response: auto-pick, ambiguous → ask contractor, no match → ask contractor
 3. Enrich item with: `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
 

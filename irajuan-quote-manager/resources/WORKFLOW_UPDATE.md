@@ -31,7 +31,7 @@ Ask contractor what changes are needed. Supported operations:
 
 ### Add new room
 - Parse items into item names
-- `SearchStore(query="מצא מחירים עבור: פריט1, פריט2, ...")` → extract pricing from response
+- `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: פריט1, פריט2, ...")` → extract pricing from response
 - Claude extracts pricing per item (see CATALOG_RULES.md)
 - No relevant pricing → ask contractor for pricing → `update_catalog`
 - `scan_room(projectId, roomName, items=[{name, qty, unit, unit_cost, unit_client_price}], offerType)` — creates room with priced items
