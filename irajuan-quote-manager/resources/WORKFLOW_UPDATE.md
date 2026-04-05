@@ -31,15 +31,15 @@ Ask contractor what changes are needed. Supported operations:
 
 ### Add new room
 - Parse items into item names
-- `SearchStore(query="מצא עלות ומחיר ללקוח עבור כל אחד מהפריטים הבאים: פריט1, פריט2, ...")` → extract pricing from response
-- Claude extracts pricing per item (see CATALOG_RULES.md)
-- No relevant pricing → ask contractor for pricing → `update_catalog`
-- `scan_room(projectId, roomName, items=[{name, qty, unit, unit_cost, unit_client_price}], offerType)` — creates room with priced items
+- `get_catalog_candidates(items="פריט1|פריט2|...")` → get candidates
+- Claude matches each item to catalog (see CATALOG_RULES.md)
+- Unmatched → ask contractor for pricing → `update_catalog` → get catalog_id
+- `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType)` — creates room with priced items
 - Show created room items for confirmation
 
 ### Add items to existing room
 1. `scan_room(projectId, roomName, newItems, offerType)` → returns `{status: "room_exists", items: [...]}`
-2. Match new items to catalog via `SearchStore` if not already matched
+2. Match new items to catalog via `get_catalog_candidates` if not already matched
 3. Combine existing items (from response) with new matched items into one array
 4. `replace_room_items(projectId, roomName, fullItemsList, offerType)` → replaces room with complete list
 5. Show updated room for confirmation
@@ -49,7 +49,7 @@ Ask contractor what changes are needed. Supported operations:
 - `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before parsing
 - `parse_boq(document_id)` — returns flat item list
 - `progress_update("⏳ מתאים פריטים לקטלוג...")` — notify contractor before batch matching
-- Group by Category → rooms, match via `SearchStore`, then `scan_room` per room
+- Group by Category → rooms, match via `get_catalog_candidates`, then `scan_room` per room
 - Show updated rooms summary
 
 ### Remove items (v2)
@@ -77,7 +77,7 @@ When contractor wants to change prices or quantities on existing offer items:
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
-2. `create_quote(projectId, quote_type="cost")` — generate cost quote (new record, not overwriting previous)
+2. `create_quote(projectId, quote_type="offer")` — generate cost quote (new record, not overwriting previous)
 3. Show internal cost summary to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
 4. Show the cost quote `driveLink` immediately (use **Cost quote created** template from TEMPLATES.md)
 5. Ask contractor to review and approve the costs:
@@ -98,7 +98,7 @@ When contractor wants to change prices or quantities on existing offer items:
 When contractor uploads a revised BOQ file:
 
 1. Steps 1-3 same as above
-2. In Step 4: `parse_boq(document_id)` → group by Category → match via `SearchStore` → `scan_room` per room
+2. In Step 4: `parse_boq(document_id)` → group by Category → match via `get_catalog_candidates` → `scan_room` per room
 3. Continue from Step 5 (generate quote)
 
 ### BOQ re-import

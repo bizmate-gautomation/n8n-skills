@@ -52,7 +52,7 @@
 **Cost quote created:**
 ```
 ✅ הצעת מחיר עלות נוצרה!
-📄 הצעת מחיר עלות: [driveLink from create_quote with quote_type="cost"]
+📄 הצעת מחיר עלות: [driveLink from create_quote with quote_type="offer"]
 ```
 
 **Client quote created:**
@@ -194,7 +194,7 @@ After update + verify:
 נמצאו [N] פריטים עם כמויות — מתאים לקטלוג:
 
 1. [ID] [Description] — [Unit]
-   התאמה: [catalog_match_name] — עלות: ₪[cost], ללקוח: ₪[client_price]
+   התאמה: [catalog_match_name] (דמיון: [score])
 
 2. [ID] [Description] — [Unit]
    התאמה: לא נמצא — נדרש תמחור ידני
