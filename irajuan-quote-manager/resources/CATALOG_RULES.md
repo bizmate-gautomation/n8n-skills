@@ -102,7 +102,7 @@ When an item is marked as **"יתומחר בהמשך"** (by the contractor, or a
 4. **Never add to catalog** — do NOT call `update_catalog`. This item stays out of the catalog even when prices are provided later
 5. **When contractor later provides prices**:
    - Manual mode: update the room item via `replace_room_items` with the actual prices, keeping unit as "קומפלט"
-   - BOQ mode: update via `update_or_create_with_boq` with the actual prices
+   - BOQ mode: update via `create_or_update_boq` with the actual prices
    - Still no `update_catalog` in either mode
 
 ---
@@ -133,7 +133,7 @@ When uncertain whether an item is catalog-resolvable → default to manual prici
 ### Catalog Matching
 
 After obtaining quantity, resolve through the standard catalog flow:
-1. `get_catalog_candidates(items="[description]")` — same as not_komplet items
+1. `get_catalog_candidates(items="[description]")` — same as unmatched non-komplet items
 2. Apply Step 2 selection rules: high similarity auto-pick, paint tiers, ambiguous → ask contractor, no match → ask contractor
 3. Enrich item with: `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
 

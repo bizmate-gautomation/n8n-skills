@@ -188,17 +188,18 @@ After update + verify:
 
 ---
 
-## BOQ Not-Komplet Items Summary
+## BOQ Unmatched Items Summary
 
 ```
-נמצאו [N] פריטים עם כמויות — מתאים לקטלוג:
+נמצאו [N] פריטים שלא הותאמו לקטלוג:
 
-1. [ID] [Description] — [Unit]
-   התאמה: [catalog_match_name] (דמיון: [score])
-
-2. [ID] [Description] — [Unit]
-   התאמה: לא נמצא — נדרש תמחור ידני
+1. [ID] [Description] — [Quantity] [Unit]
+2. [ID] [Description] — [Quantity] [Unit]
 ...
+
+עבור כל פריט, מה תעדיף?
+1. לחפש מחירים בגוגל
+2. להזין מחיר ידנית (עלות + מחיר ללקוח)
 ```
 
 ---
