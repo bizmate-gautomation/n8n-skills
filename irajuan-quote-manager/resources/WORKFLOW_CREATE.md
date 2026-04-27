@@ -35,7 +35,7 @@ Ask in **one prompt**:
 
 **At this point, ask the contractor:**
 ```
-"יש לך כתב כמויות (Excel/PDF) או שנזין את הפריטים ידנית?"
+"יש לך כתב כמויות (Excel) או שנזין את הפריטים ידנית?"
 ```
 - If BOQ → jump to [Step 3-BOQ](#step-3-boq-כתב-כמויות)
 - If manual → continue to Step 3a
