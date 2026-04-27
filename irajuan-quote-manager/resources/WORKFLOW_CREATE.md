@@ -105,7 +105,7 @@ For each room:
 
 ## Step 3-BOQ: כתב כמויות
 
-When contractor provides a BOQ file (Excel/PDF):
+When contractor provides a BOQ file (Excel):
 
 1. Agent receives: drive file ID, file name, file URL
 2. `create_boq_record(boq_name=file_name, boq_projectId=projectId, boq_leadId=leadId, boq_fileUrl=fileUrl)` — store BOQ record in Airtable
