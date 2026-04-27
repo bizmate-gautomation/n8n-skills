@@ -60,7 +60,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 
 ### Mode 1: Manual (without BOQ)
 
-Contractor describes items verbally. Flow: global items → special jobs → room-by-room.
+Contractor describes items verbally. Flow: room-by-room → מכולות.
 → [WORKFLOW_CREATE.md](WORKFLOW_CREATE.md)
 
 ### Mode 2: With BOQ (כתב כמויות)
@@ -72,7 +72,7 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 
 1. **Lead** — ask full name + phone upfront → `search_lead` → create if needed
 2. **Project** — ask type/address/rooms/sqm → name = "[name] — [address]" → `search_project` → create if needed
-3. **Items (Manual)** — global → special jobs → rooms → `get_catalog_candidates` per batch → `scan_room` per room
+3. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
 3. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves matched items) → returns unmatched + komplet → classify komplet into A/B/C groups
 4. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
 4. **Match & Save (BOQ)** — komplet: Group B → catalog match, Group C → manual pricing, Group A → auto 0. Unmatched non-komplet → `update_catalog` + pricing
