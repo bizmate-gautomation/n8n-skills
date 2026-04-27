@@ -235,14 +235,14 @@ When contractor provides a BOQ file (Excel):
 
 ## Step 5-BOQ: Generate Quote — BOQ Mode (יצירת הצעת מחיר — כתב כמויות)
 
-1. `create_or_update_boq(project_id, offer_type="cost", updates_or_create=[...only items that received pricing...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values)
+1. **Only if there are priced items** → `create_or_update_boq(project_id, offer_type="cost", updates_or_create=[...only items that received pricing...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values). If all items are "יתומחר בהמשך", skip this call entirely.
 2. `progress_update("⏳ מכין הצעת מחיר...")`
 3. `create_boq_quote(project_id, offer_type="cost", document_id=drive_file_id)` — generate cost quote → returns drive link
 4. Show internal cost summary to contractor (Internal Cost Summary template)
 5. Show the cost quote drive link (BOQ Cost quote created template)
 6. Ask contractor to review and approve costs
 7. **If contractor wants corrections** → Offer Correction sub-flow (use `create_boq_quote` to regenerate instead of `create_quote`) → return to step 1
-8. **After explicit cost approval** → `create_or_update_boq(project_id, offer_type="client", updates_or_create=[...same priced items...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values)
+8. **After explicit cost approval** → **only if there are priced items** → `create_or_update_boq(project_id, offer_type="client", updates_or_create=[...same priced items...])`. If all items are "יתומחר בהמשך", skip this call entirely.
 9. `create_boq_quote(project_id, offer_type="client", document_id=drive_file_id)` — generate client quote → returns drive link
 10. Show client quote + drive link (BOQ Client quote created template)
 11. Same correction/approval cycle for client quote
