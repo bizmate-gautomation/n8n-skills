@@ -137,7 +137,7 @@ When contractor provides a BOQ file (Excel):
 
    Do NOT pattern-match blindly — use contextual understanding. E.g., "לא ניתן לתמחר בצורה חלקית, תמחור מלא יהיה אחרי סיום הריסות" → Group A (overall meaning: can't price now).
 
-   Treatment: `Quantity: 1`, `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`, unit stays "קומפלט". No catalog lookup, no contractor question.
+   Treatment: `Quantity: 1`, `unit_cost: 0`, `unit_client_price: 0`, `_isCompleted: false`, `Status: "Pending Quote"`, unit stays "קומפלט". No catalog lookup, no contractor question. These items are already persisted by `create_quta_offer` with zero values and are NOT included in `create_or_update_boq`.
 
    **Group B — Catalog-resolvable** (standard work, just needs quantity):
    Identify items whose Description describes **common, standard** construction work that a typical renovation contractor's catalog would contain — but is marked "קומפלט" only because the BOQ didn't specify an exact quantity. Signals:
@@ -180,7 +180,7 @@ When contractor provides a BOQ file (Excel):
    **Step 6c: Process contractor's response**
 
    - Group B: take quantities → `get_catalog_candidates` (batch, pipe-separated). If 5+ items, `progress_update("⏳ מתאים פריטים לקטלוג...")` first. Match per CATALOG_RULES.md. Ambiguous matches → ask contractor to choose (may require follow-up questions). Failed matches → ask contractor for manual pricing (Group C fallback).
-   - Group C: apply contractor-provided prices. Items marked "יתומחר בהמשך" by contractor → Group A treatment.
+   - Group C: apply contractor-provided prices. Items marked "יתומחר בהמשך" by contractor → Group A treatment (excluded from `create_or_update_boq`, already in DB with zero values).
    - Group A: already handled, no processing needed.
 
 7. **Process unmatched non-komplet items** — filter items where `reason: "no match"` and Unit ≠ "קומפלט":
@@ -188,16 +188,16 @@ When contractor provides a BOQ file (Excel):
    - Ask contractor for pricing: "לחפש בגוגל או להזין מחיר ידנית?"
    - Google → `WebSearch` for item pricing, show links → contractor provides final price
    - Manual → contractor gives cost + client price
+   - If contractor marks an item as "יתומחר בהמשך" → exclude from `create_or_update_boq` (already in DB with zero values)
    - After getting prices → `update_catalog` → get catalog_id
    - Enrich each item with: `catalog_id`, `unit_cost`, `unit_client_price`
    - For each priced item: set `_isCompleted: true`, `Status: "Priced"`
 
-8. Build the items array for `create_or_update_boq` — only items the agent handled (matched items already saved by backend):
-   - Group A komplet items: `unit_cost: 0`, `unit_client_price: 0`, `Quantity: 1`, `_isCompleted: false`, `Status: "Pending Quote"`
+8. Build the items array for `create_or_update_boq` — only items that received actual pricing. Items marked "יתומחר בהמשך" (whether auto-classified Group A or contractor-declared) are already in the DB and should NOT be included:
    - Group B komplet items (catalog-matched): `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog — replaces "קומפלט"), `_isCompleted: true`, `Status: "Priced"`
-   - Group B komplet items (fallback to C): same as Group C
-   - Group C komplet items: `unit_cost`, `unit_client_price`, `Quantity: 1`, `Unit: "קומפלט"`, `_isCompleted: true`, `Status: "Priced"`
-   - Unmatched non-komplet items: `catalog_id`, `unit_cost`, `unit_client_price`, `Quantity` (from BOQ), `_isCompleted: true`, `Status: "Priced"`
+   - Group B komplet items (fallback to C, with pricing): same as Group C
+   - Group C komplet items (only those with pricing from contractor): `unit_cost`, `unit_client_price`, `Quantity: 1`, `Unit: "קומפלט"`, `_isCompleted: true`, `Status: "Priced"`
+   - Unmatched non-komplet items (only those with pricing): `catalog_id`, `unit_cost`, `unit_client_price`, `Quantity` (from BOQ), `_isCompleted: true`, `Status: "Priced"`
 
 9. Show complete summary of all agent-handled items with pricing to contractor for confirmation
 
@@ -235,14 +235,14 @@ When contractor provides a BOQ file (Excel):
 
 ## Step 5-BOQ: Generate Quote — BOQ Mode (יצירת הצעת מחיר — כתב כמויות)
 
-1. `create_or_update_boq(project_id, offer_type="cost", updates_or_create=[...agent-handled items with pricing...])` — save komplet + unmatched items for cost offer (matched items already saved by backend)
+1. `create_or_update_boq(project_id, offer_type="cost", updates_or_create=[...only items that received pricing...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values)
 2. `progress_update("⏳ מכין הצעת מחיר...")`
 3. `create_boq_quote(project_id, offer_type="cost", document_id=drive_file_id)` — generate cost quote → returns drive link
 4. Show internal cost summary to contractor (Internal Cost Summary template)
 5. Show the cost quote drive link (BOQ Cost quote created template)
 6. Ask contractor to review and approve costs
 7. **If contractor wants corrections** → Offer Correction sub-flow (use `create_boq_quote` to regenerate instead of `create_quote`) → return to step 1
-8. **After explicit cost approval** → `create_or_update_boq(project_id, offer_type="client", updates_or_create=[...same items...])` — save items for client offer
+8. **After explicit cost approval** → `create_or_update_boq(project_id, offer_type="client", updates_or_create=[...same priced items...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values)
 9. `create_boq_quote(project_id, offer_type="client", document_id=drive_file_id)` — generate client quote → returns drive link
 10. Show client quote + drive link (BOQ Client quote created template)
 11. Same correction/approval cycle for client quote
