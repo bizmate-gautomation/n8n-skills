@@ -77,7 +77,7 @@ When contractor wants to change prices or quantities on existing offer items:
 ## Step 5: Generate Updated Quote (הצעה מעודכנת)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
-2. `create_quote(projectId, quote_type="offer")` — generate cost quote (new record, not overwriting previous)
+2. `create_quote(projectId, quote_type="cost")` — generate cost quote (new record, not overwriting previous)
 3. Show internal cost summary to contractor (Internal Cost Summary template) — includes עלות, מחיר ללקוח, and רווח
 4. Show the cost quote `driveLink` immediately (use **Cost quote created** template from TEMPLATES.md)
 5. Ask contractor to review and approve the costs:

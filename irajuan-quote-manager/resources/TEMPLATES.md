@@ -52,7 +52,7 @@
 **Cost quote created:**
 ```
 ✅ הצעת מחיר עלות נוצרה!
-📄 הצעת מחיר עלות: [driveLink from create_quote with quote_type="offer"]
+📄 הצעת מחיר עלות: [driveLink from create_quote with quote_type="cost"]
 ```
 
 **Client quote created:**
