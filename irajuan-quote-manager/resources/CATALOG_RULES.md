@@ -12,9 +12,8 @@ Claude performs catalog matching using `get_catalog_candidates` results. For eac
 For each item, apply these rules in order:
 
 1. **High similarity auto-pick**: Top score ≥ 0.8 AND gap to second candidate ≥ 0.15 → select top candidate
-2. **Paint items** → select by project room count tier (see Paint Item Logic below)
-3. **Tiered items** (have `minRooms`/`maxRooms` or `hint`) → use hint + project context to select correct tier
-4. **Ambiguous** (multiple close candidates) → ask contractor to choose
+2. **Tiered items** (have `hint`) → use hint to select correct tier
+3. **Ambiguous** (multiple close candidates) → ask contractor to choose
 5. **No match** (top score < 0.4 or irrelevant candidates) → ask contractor:
    ```
    "הפריט '[item name]' לא נמצא בקטלוג. מה תעדיף?
@@ -27,20 +26,9 @@ For each item, apply these rules in order:
 
 ---
 
-## Paint Item Logic (צביעה/צבע)
-
-Paint items require special handling:
-
-1. **Never auto-matched** — always check room tier even if similarity is high
-2. **Priced as קומפלט** (complete package) based on total rooms count
-3. **Tiered catalog entries**: "צביעת קירות — דירה 4 חדרים", "צביעת קירות — דירה 5 חדרים"
-4. **Selection uses** `minRooms`/`maxRooms` from candidates — pick the tier matching project room count
----
-
 ## SQM-Based Items (פריטים לפי מ״ר)
 
-- Items with unit **"מ״ר"** use the room's sqm as quantity
-- If room sqm is unknown → ask contractor for room size before creating room
+- Items with unit **"מ״ר"** → ask contractor for the room's size in מ"ר and use as quantity
 - Claude sets quantity = sqm when building the items array for `scan_room`
 
 ---
@@ -52,12 +40,6 @@ Catalog supports conditional selection via these columns:
 | Column | Purpose |
 |--------|---------|
 | `ai_selection_hint` | Free-text instruction for when to select this item |
-| `min_rooms` | Minimum room count for this tier |
-| `max_rooms` | Maximum room count for this tier |
-| `min_sqm` | Minimum project sqm for this tier |
-| `max_sqm` | Maximum project sqm for this tier |
-
-Claude uses project context (room count, sqm) to pick the right tier from candidates.
 
 ---
 
@@ -132,7 +114,7 @@ When uncertain whether an item is catalog-resolvable → default to manual prici
 
 After obtaining quantity, resolve through the standard catalog flow:
 1. `get_catalog_candidates(items="[description]")` — same as unmatched non-komplet items
-2. Apply Step 2 selection rules: high similarity auto-pick, paint tiers, ambiguous → ask contractor, no match → ask contractor
+2. Apply Step 2 selection rules: high similarity auto-pick, ambiguous → ask contractor, no match → ask contractor
 3. Enrich item with: `catalog_id`, `unit_cost`, `unit_client_price`, actual `Quantity`, actual `Unit` (from catalog, not "קומפלט")
 
 ### Fallback

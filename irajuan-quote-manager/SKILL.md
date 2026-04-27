@@ -19,7 +19,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 | `search_lead` | Search lead by phone | `{phone}` |
 | `create_lead` | Create new lead | `{fullName*, phone*, email?, address?, workType?, source?}` |
 | `search_project` | Search project by name | `{name}` |
-| `create_project` | Create project | `{name*, leadId*, type*, address, rooms, sizeSQM}` |
+| `create_project` | Create project | `{name*, leadId*, type*, address}` |
 
 ### Room & Item Management
 
@@ -71,7 +71,7 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 ## Quick Flow Overview
 
 1. **Lead** — ask full name + phone upfront → `search_lead` → create if needed
-2. **Project** — ask type/address/rooms/sqm → name = "[name] — [address]" → `search_project` → create if needed
+2. **Project** — ask type/address → name = "[name] — [address]" → `search_project` → create if needed
 3. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
 3. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves matched items) → returns unmatched + komplet → classify komplet into A/B/C groups
 4. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs

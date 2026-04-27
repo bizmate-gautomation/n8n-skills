@@ -23,15 +23,13 @@ Ask in **one prompt**:
 ```
 "מעולה! עכשיו לגבי הפרויקט:
 • סוג פרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)
-• כתובת?
-• מספר חדרים?
-• גודל במ״ר?"
+• כתובת?"
 ```
 
 1. Auto-generate name: `"[fullName] — [address]"`
 2. `search_project(name)` — check for existing
 3. **Found** → confirm with contractor, use existing `projectId`
-4. **Not found** → `create_project(name, leadId, type, address, rooms, sizeSQM)`
+4. **Not found** → `create_project(name, leadId, type, address)`
 
 **At this point, ask the contractor:**
 ```
@@ -58,8 +56,7 @@ For each room:
 4. For all other items: `get_catalog_candidates(items="פרקט|שפכטל|...")` → get candidates
 5. Claude matches each item to catalog (see [CATALOG_RULES.md](CATALOG_RULES.md)):
    - High similarity (≥0.8) with clear gap → auto-pick
-   - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
-   - SQM items → use room sqm as quantity
+   - SQM items (unit מ"ר) → ask contractor for the room's size in מ"ר and use as quantity
    - Ambiguous → ask contractor to choose from candidates
    - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
 6. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items

@@ -14,7 +14,7 @@
 ## Room Parsed Confirmation
 
 ```
-✅ חדר: [room_name] ([sqm] מ"ר)
+✅ חדר: [room_name]
 פריטים שנוספו:
   • [item_name] — [qty] [unit]
   • [item_name] — [qty] [unit]
