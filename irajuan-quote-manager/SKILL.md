@@ -91,8 +91,7 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 4. **Two price columns** — עלות (contractor cost) vs מחיר ללקוח (client price). Always track both. Never show עלות to the customer.
 5. **`scan_room` prevents duplicates (manual mode only)** — If room already exists, returns `{status: "room_exists", items: [...]}`. Claude merges existing items with new items, then calls `replace_room_items` with the FULL combined list. Never call `scan_room` twice for the same room name. Not used in BOQ mode.
 6. **`offerType` parameter (manual mode only)** — `withoutBOQ` for manual entry. BOQ mode uses `create_or_update_boq` + `create_boq_quote` instead of `scan_room` + `create_quote`.
-7. **Global items use roomName="כללי"** — apartment-wide items like paint, electrical panel, general plumbing.
-8. **Special jobs use roomName="עבודות מיוחדות"** — priced by work days or fixed price.
+7. **מכולות use roomName="כללי"** — after all rooms are done, ask how many מכולות and add to room "כללי" via catalog matching.
 8. **Project naming convention** — always format as: "[שם מלא] — [כתובת]".
 
 10. **Match before scan** — always call `get_catalog_candidates` before `scan_room` so rooms are created with full pricing.

@@ -16,8 +16,7 @@
 | ממ״ד | Safe room (bomb shelter) |
 | כניסה | Entrance |
 | חדר כביסה | Laundry room |
-| כללי | Global / apartment-wide |
-| עבודות מיוחדות | Special jobs |
+| כללי | Global (used for מכולות) |
 
 ## Common Renovation Items (פריטי שיפוץ)
 

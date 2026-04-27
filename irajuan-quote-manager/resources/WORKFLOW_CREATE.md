@@ -38,50 +38,11 @@ Ask in **one prompt**:
 "יש לך כתב כמויות (Excel) או שנזין את הפריטים ידנית?"
 ```
 - If BOQ → jump to [Step 3-BOQ](#step-3-boq-כתב-כמויות)
-- If manual → continue to Step 3a
+- If manual → continue to Step 3
 
 ---
 
-## Step 3a: Manual Mode — Global Items (פריטים כלליים)
-
-```
-"מה הפריטים הכלליים שחלים על כל הדירה?
-לדוגמה: צביעה, לוח חשמל, אינסטלציה כללית..."
-```
-
-1. Parse the contractor's description into item names
-2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
-3. If 5+ non-"יתומחר בהמשך" items → `progress_update("⏳ מחפש פריטים בקטלוג...")` before catalog search
-4. For all other items: `get_catalog_candidates(items="צביעה|לוח חשמל|...")` — get candidates per item
-5. Claude matches each item (see [CATALOG_RULES.md](CATALOG_RULES.md)):
-   - High similarity (≥0.8) with clear gap → auto-pick
-   - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
-   - SQM items → use room sqm as quantity
-   - Ambiguous → ask contractor to choose from candidates
-   - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
-6. Call `scan_room(projectId, roomName="כללי", items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
-7. Show created items for confirmation (use Room Parsed template from TEMPLATES.md)
-8. If contractor says none → skip to Step 3b
-
-## Step 3b: Manual Mode — Special Jobs (עבודות מיוחדות)
-
-```
-"האם יש עבודות מיוחדות?
-ניתן לתמחר לפי ימי עבודה או מחיר קבוע."
-```
-
-- **Work-day based**: see Work-Day Pricing in [CATALOG_RULES.md](CATALOG_RULES.md)
-- **Fixed price**: contractor provides total price directly
-
-1. Parse the contractor's description into item names
-2. **"יתומחר בהמשך" items** → skip catalog, add with 0 costs and unit "קומפלט" (same as Step 3a)
-3. For all other items: `get_catalog_candidates(items="...")` → match to catalog
-4. Claude picks best match per item (same rules as Step 3a)
-5. Call `scan_room(projectId, roomName="עבודות מיוחדות", items=[...], offerType="withoutBOQ")`
-6. Show created items for confirmation
-7. If none → skip to Step 3c
-
-## Step 3c: Manual Mode — Room-by-Room (חדר אחרי חדר)
+## Step 3: Manual Mode — Room-by-Room (חדר אחרי חדר)
 
 For each room:
 
@@ -92,14 +53,33 @@ For each room:
 ```
 
 1. Parse room description into item names
-2. **"יתומחר בהמשך" items** → skip catalog, add with 0 costs and unit "קומפלט" (same as Step 3a)
-3. For all other items: `get_catalog_candidates(items="פרקט|שפכטל|...")` → get candidates
-4. Claude matches each item to catalog (same rules as Step 3a)
-5. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
-6. Show created result using Room Parsed template
-7. Let contractor confirm or correct
-8. Ask: "יש חדר נוסף?"
-9. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
+2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
+3. If 5+ non-"יתומחר בהמשך" items → `progress_update("⏳ מחפש פריטים בקטלוג...")` before catalog search
+4. For all other items: `get_catalog_candidates(items="פרקט|שפכטל|...")` → get candidates
+5. Claude matches each item to catalog (see [CATALOG_RULES.md](CATALOG_RULES.md)):
+   - High similarity (≥0.8) with clear gap → auto-pick
+   - Paint items → select by project room count tier (use `minRooms`/`maxRooms`)
+   - SQM items → use room sqm as quantity
+   - Ambiguous → ask contractor to choose from candidates
+   - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
+6. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with priced items
+7. Show created result using Room Parsed template
+8. Let contractor confirm or correct
+9. Ask: "יש חדר נוסף?"
+10. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
+
+## Step 3-מכולות: Dumpsters (מכולות)
+
+After all rooms are done:
+
+```
+"כמה מכולות צריך לפרויקט?"
+```
+
+1. Take contractor's quantity
+2. `get_catalog_candidates(items="מכולה")` → match to catalog
+3. `scan_room(projectId, roomName="כללי", items=[{name: "מכולה", qty: [contractor's number], unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
+4. Show confirmation
 
 ---
 

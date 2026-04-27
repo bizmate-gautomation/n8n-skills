@@ -35,8 +35,6 @@ Paint items require special handling:
 2. **Priced as קומפלט** (complete package) based on total rooms count
 3. **Tiered catalog entries**: "צביעת קירות — דירה 4 חדרים", "צביעת קירות — דירה 5 חדרים"
 4. **Selection uses** `minRooms`/`maxRooms` from candidates — pick the tier matching project room count
-5. **Deduplication**: if global room ("כללי") has a paint item → room-level paint items are suppressed
-
 ---
 
 ## SQM-Based Items (פריטים לפי מ״ר)
