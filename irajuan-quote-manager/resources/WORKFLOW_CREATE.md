@@ -88,12 +88,20 @@ When contractor provides a BOQ file (Excel):
 2. `create_boq_record(boq_name=file_name, boq_projectId=projectId, boq_leadId=leadId, boq_fileUrl=fileUrl)` — store BOQ record in Airtable
 3. `progress_update("⏳ מעבד את כתב הכמויות...")` — notify contractor before processing
 4. `parse_boq(boq_document_id=drive_file_id)` — parses the BOQ file and stores in DB → returns `{id}` (postgres record ID)
-5. `create_quta_offer(quta_id=id, project_id=projectId)` — backend does catalog matching, auto-saves matched items, returns only items needing agent handling:
+5. `create_quta_offer(quta_id=id, project_id=projectId)` — backend does catalog matching, auto-saves matched items. Response format depends on unmatched count:
+
+   **If unmatched < 4** → returns items array for agent handling:
    - Items with `Unit: "קומפלט"` → komplet items needing classification
    - Items with `reason: "no match"` (and Unit ≠ "קומפלט") → unmatched non-komplet items needing pricing
    - Each item has: `{ID, _excel_row, Description, Category, Unit, Quantity, reason}`
    - `summary: {total, matched, unmatched}`
    - **Note**: `_excel_row` is the unique identifier. `ID` values can be duplicated across items. Matched items are already saved by the backend and are NOT returned.
+   - → Continue to step 6 (agent handles items directly)
+
+   **If unmatched ≥ 4** → returns review URL instead of items:
+   - `summary: {total, matched, unmatched}`
+   - `review: {url, token, unmatched_count, expires_at}`
+   - → Jump to [Step 3-BOQ-URL](#step-3-boq-url-תמחור-דרך-קישור)
 
 6. **Process komplet items** — filter items where `Unit: "קומפלט"`, sub-classify into 3 groups, then present in one message:
 
@@ -179,6 +187,30 @@ When contractor provides a BOQ file (Excel):
 9. Show complete summary of all agent-handled items with pricing to contractor for confirmation
 
 → Continue to Step 5-BOQ
+
+---
+
+## Step 3-BOQ-URL: תמחור דרך קישור
+
+When `create_quta_offer` returns a review URL (unmatched ≥ 4):
+
+1. Send contractor the **BOQ URL Review Request** message (see TEMPLATES.md) with the `review.url` and `review.unmatched_count`
+2. Wait for contractor to confirm they finished filling prices (e.g., "צור הצעה", "סיימתי", "create the offer")
+3. Skip `create_or_update_boq` entirely — the URL page saves all items directly
+4. → Continue to Step 5-BOQ-URL
+
+## Step 5-BOQ-URL: Generate Quote — URL Flow (יצירת הצעת מחיר — קישור)
+
+1. `progress_update("⏳ מכין הצעת מחיר...")`
+2. `create_boq_quote(project_id, offer_type="cost", document_id=drive_file_id)` — generate cost quote → returns drive link
+3. Show internal cost summary to contractor (Internal Cost Summary template)
+4. Show the cost quote drive link (BOQ Cost quote created template)
+5. Ask contractor to review and approve costs
+6. **If contractor wants corrections** → Offer Correction sub-flow (use `create_boq_quote` to regenerate) → return to step 1
+7. **After explicit cost approval** → `create_boq_quote(project_id, offer_type="client", document_id=drive_file_id)` — generate client quote → returns drive link
+8. Show client quote + drive link (BOQ Client quote created template)
+9. Same correction/approval cycle for client quote
+10. Done after explicit client approval
 
 ---
 

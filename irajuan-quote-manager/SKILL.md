@@ -42,7 +42,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 |------|---------|------------|
 | `create_boq_record` | Create BOQ record in Airtable | `{boq_name*, boq_projectId?, boq_leadId?, boq_fileUrl*}` |
 | `parse_boq` | Parse BOQ file and store in DB | `{boq_document_id}` → returns `{id}` (postgres record ID for use in `create_quta_offer`) |
-| `create_quta_offer` | Process BOQ: catalog-match items, auto-save matched, return unmatched + komplet | `{quta_id*, project_id*}` → returns items array (each item: `{ID, _excel_row, Description, Category, Unit, Quantity, reason}`) + `{summary: {total, matched, unmatched}}`. Komplet items have `Unit: "קומפלט"`. Unmatched items have `reason: "no match"`. Matched items are auto-saved by backend (not returned). |
+| `create_quta_offer` | Process BOQ: catalog-match items, auto-save matched. Two response formats: **unmatched < 4** → returns items array (each item: `{ID, _excel_row, Description, Category, Unit, Quantity, reason}`) + `{summary}` for agent handling. **unmatched ≥ 4** → returns `{summary, review: {url, token, unmatched_count, expires_at}}` — agent sends URL to contractor and waits | `{quta_id*, project_id*}` |
 | `create_or_update_boq` | Save agent-handled BOQ items (komplet + unmatched) with pricing to DB | `{project_id*, offer_type* ("cost"/"client"), updates_or_create*: [{...item fields + unit_cost, unit_client_price, catalog_id?, _isCompleted}]}` → `{status: "ok"}` |
 | `create_boq_quote` | Generate BOQ quote document (Drive) | `{project_id*, offer_type* ("cost"/"client"), document_id*}` → returns drive link |
 
@@ -65,7 +65,7 @@ Contractor describes items verbally. Flow: room-by-room → מכולות.
 
 ### Mode 2: With BOQ (כתב כמויות)
 
-Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_offer` does catalog matching and auto-saves matched items. Returns only unmatched + komplet items for agent handling. Agent classifies komplet items (A/B/C), asks contractor for missing pricing, then saves via `create_or_update_boq`. Quotes generated with `create_boq_quote`.
+Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_offer` does catalog matching and auto-saves matched items. Two paths based on unmatched count: **< 4 unmatched** → returns items for agent handling (classify komplet A/B/C, price unmatched, save via `create_or_update_boq`). **≥ 4 unmatched** → returns review URL, agent sends URL to contractor, waits for confirmation, then goes directly to `create_boq_quote` (no `create_or_update_boq` needed). Quotes generated with `create_boq_quote`.
 → [WORKFLOW_CREATE.md](WORKFLOW_CREATE.md)
 
 ## Quick Flow Overview
@@ -73,12 +73,13 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 1. **Lead** — ask full name + phone upfront → `search_lead` → create if needed
 2. **Project** — ask type/address → name = "[name] — [address]" → `search_project` → create if needed
 3. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
-3. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves matched items) → returns unmatched + komplet → classify komplet into A/B/C groups
+3. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves). If unmatched < 4 → classify komplet A/B/C + price unmatched. If unmatched ≥ 4 → send review URL to contractor → wait for confirmation
 4. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
-4. **Match & Save (BOQ)** — komplet: Group B → catalog match, Group C → manual pricing, Group A → auto 0. Unmatched non-komplet → `update_catalog` + pricing
+4. **Match & Save (BOQ, < 4 unmatched)** — komplet: Group B → catalog match, Group C → manual pricing, Group A → auto 0. Unmatched non-komplet → `update_catalog` + pricing
 5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
 6. **Quote (Manual)** — `create_quote` → show internal cost summary → contractor reviews → corrections → `create_quote` again → repeat until approved → show client quote
-6. **Quote (BOQ)** — `create_or_update_boq(cost)` → `create_boq_quote(cost)` → review → approve → `create_or_update_boq(client)` → `create_boq_quote(client)` → review → approve
+6. **Quote (BOQ, < 4 unmatched)** — `create_or_update_boq(cost)` → `create_boq_quote(cost)` → review → approve → `create_or_update_boq(client)` → `create_boq_quote(client)` → review → approve
+6. **Quote (BOQ, ≥ 4 unmatched / URL flow)** — `create_boq_quote(cost)` → review → approve → `create_boq_quote(client)` → review → approve (no `create_or_update_boq` needed)
 
 
 For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)

@@ -188,6 +188,18 @@ After update + verify:
 
 ---
 
+## BOQ URL Review Request
+
+```
+נמצאו [unmatched_count] פריטים שלא הותאמו לקטלוג.
+אנא הוסף מחירים לכל הפריטים בקישור הבא:
+🔗 [url]
+
+לאחר שתסיים למלא את המחירים, אמור לי ״צור הצעה״ ואני אכין את הצעת המחיר.
+```
+
+---
+
 ## BOQ Unmatched Items Summary
 
 ```
