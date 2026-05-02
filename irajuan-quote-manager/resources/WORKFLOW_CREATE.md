@@ -74,7 +74,7 @@ After all rooms are done:
 ```
 
 1. Take contractor's quantity
-2. `get_catalog_candidates(items="מכולה")` → match to catalog
+2. `get_catalog_candidates(items="מכולה")` → match to catalog. Do not send `progress_update` for מכולה.
 3. `scan_room(projectId, roomName="כללי", items=[{name: "מכולה", qty: [contractor's number], unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")`
 4. Show confirmation
 
