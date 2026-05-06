@@ -36,18 +36,23 @@ Ask for all details in **one prompt**:
 
 ## Step 2: Manual Mode — Room-by-Room (חדר אחרי חדר)
 
-For each room:
+Contractor may provide rooms one at a time or multiple rooms in one message. Either way, process each room separately through steps 1-7 (catalog match + `scan_room` per room).
 
 ```
-"בוא נעבור חדר חדר. ספר לי על החדר הראשון:
+"בוא נעבור על החדרים. ספר לי על החדרים:
 • שם החדר?
-• מה הפריטים? (עם כמויות אם ידוע)"
+• מה הפריטים? (עם כמויות אם ידוע)
+ניתן לשלוח חדר אחד או מספר חדרים בהודעה אחת."
 ```
+
+**If multiple rooms provided** → parse all rooms, identify room names and their items. If agent can't clearly distinguish between rooms → ask contractor to clarify. If a room has a name but no items → ask for its items before processing. Batch `get_catalog_candidates` across all rooms (pipe-separated) and assign matches back to respective rooms. If komplet items with prices appear across rooms, batch the cost/client question once for all. If 3+ rooms → `progress_update("⏳ יוצר חדרים בפרויקט...")` before the batch.
+
+**Per room — steps 1-7:**
 
 1. Parse room description into item names
 2. **"יתומחר בהמשך" items** → skip catalog matching, add with `unit_cost: 0`, `unit_client_price: 0`, `unit: "קומפלט"`. Do NOT call `update_catalog` (see CATALOG_RULES.md)
 3. **Komplet items with prices** → if contractor specifies an item as קומפלט with a price (e.g., "1 קומפלט - 10,000 שח", "מחיר קבוע 5,000 שח"), or provides a complex/custom item description (not a standard catalog item) with a price — skip catalog matching:
-   - Ask contractor: "המחיר שציינת הוא עלות (המחיר שלך) או מחיר ללקוח?" — then collect the missing price
+   - Ask contractor: "המחירים שציינת הם עלות (המחיר שלך) או מחיר ללקוח?" — then collect the missing price
    - If contractor provides both cost and client price → use both directly, no need to ask
    - Add with: `unit: "קומפלט"`, `quantity: 1`
    - Do NOT call `get_catalog_candidates` or `update_catalog` for these items
@@ -60,10 +65,14 @@ For each room:
    - Ambiguous → ask contractor to choose from candidates
    - No match → ask contractor: "לחפש בגוגל או להזין מחיר ידנית?" → Google: `WebSearch` for item pricing, show links → contractor provides final price / Manual: contractor gives cost + client price → `update_catalog` → get catalog_id
 7. `scan_room(projectId, roomName, items=[{name, qty, unit, catalog_id, unit_cost, unit_client_price}], offerType="withoutBOQ")` — creates room with ALL items (from steps 2, 3, and 6)
-8. Show created result using Room Parsed template
+
+**After processing:**
+
+8. Show created results for all rooms using Room Parsed template
 9. Let contractor confirm or correct
-10. Ask: "יש חדר נוסף?"
-11. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
+10. If contractor provided a single room → ask "יש חדר נוסף?"
+11. If contractor already indicated they're done (sent all rooms, said "סיימתי" / "זהו" / "אין עוד") → proceed to Step 2-מכולות
+12. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
 
 ## Step 2-מכולות: Dumpsters (מכולות)
 
