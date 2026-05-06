@@ -70,7 +70,7 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 
 ## Quick Flow Overview
 
-1. **Lead + Project** — ask full name, phone, address, type in one prompt → `search_lead` → create if needed → name = "[name] — [address]" → `search_project` → create if needed
+1. **Lead + Project + Mode** — ask full name, phone, address, type, and BOQ/manual in one prompt → `search_lead` → create if needed → name = "[name] — [address]" → `search_project` → create if needed → BOQ or room-by-room
 2. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
 2. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves). If unmatched < 4 → classify komplet A/B/C + price unmatched. If unmatched ≥ 4 → send review URL to contractor → wait for confirmation
 3. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs

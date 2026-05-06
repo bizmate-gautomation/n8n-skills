@@ -10,7 +10,8 @@ Ask for all details in **one prompt**:
 1.מה השם המלא של הלקוח
 2.מספר הטלפון
 3.כתובת הפרויקט
-4.סוג הפרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)"
+4.סוג הפרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)
+5.יש לך כתב כמויות (Excel) או שנעבור חדר חדר?"
 ```
 
 **Lead:**
@@ -27,12 +28,9 @@ Ask for all details in **one prompt**:
 3. **Found** → confirm with contractor, use existing `projectId`
 4. **Not found** → `create_project(name, leadId, type, address)`
 
-**At this point, ask the contractor:**
-```
-"יש לך כתב כמויות (Excel) או שנעבור חדר חדר?"
-```
-- If BOQ → jump to [Step 2-BOQ](#step-2-boq-כתב-כמויות)
-- If manual → continue to Step 2
+**Branching:**
+- If BOQ (contractor sends Excel file or says yes) → jump to [Step 2-BOQ](#step-2-boq-כתב-כמויות)
+- If manual (contractor says חדר חדר / ידנית / no BOQ) → continue to Step 2
 
 ---
 
