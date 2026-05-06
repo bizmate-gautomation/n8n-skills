@@ -14,7 +14,7 @@ For each item, apply these rules in order:
 1. **High similarity auto-pick**: Top score ≥ 0.8 AND gap to second candidate ≥ 0.15 → select top candidate
 2. **Tiered items** (have `hint`) → use hint to select correct tier
 3. **Ambiguous** (multiple close candidates) → ask contractor to choose
-5. **No match** (top score < 0.4 or irrelevant candidates) → ask contractor:
+4. **No match** (top score < 0.4 or irrelevant candidates) → ask contractor:
    ```
    "הפריט '[item name]' לא נמצא בקטלוג. מה תעדיף?
    1. לחפש מחירים בגוגל
@@ -132,7 +132,7 @@ If catalog matching fails (no suitable candidate, contractor rejects all options
 ## Work-Day Pricing (תעריף יום עבודה)
 
 - Catalog contains a **"תעריף יום עבודה"** entry with a daily rate
-- Applies to **any room** (global, special jobs, or room-by-room) — not limited to special jobs
+- Applies to **any room**
 - **Quantity is always 1**. Multiply the daily rate × number of work days to compute `unit_cost` and `unit_client_price`
   - Example: "טיפול רטיבות 5 ימי עבודה" with daily rate cost=200, client_price=300 → `quantity: 1, unit_cost: 1000, unit_client_price: 1500`
 - Alternative: contractor specifies a fixed total price → quantity=1, unit_cost=fixed price

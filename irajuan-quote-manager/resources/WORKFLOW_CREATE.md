@@ -1,31 +1,27 @@
 # יצירת הצעת מחיר — תהליך מלא
 
-## Step 1: Lead (ליד)
+## Step 1: Lead + Project (ליד + פרויקט)
 
-Ask for **שם מלא** (full name) and **טלפון** (phone) in one prompt.
+Ask for all details in **one prompt**:
 
 ```
 "שלום! בוא נתחיל ליצור הצעת מחיר.
-מה השם המלא של הלקוח ומספר הטלפון?"
+נא ציין:
+1.מה השם המלא של הלקוח
+2.מספר הטלפון
+3.כתובת הפרויקט
+4.סוג הפרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)"
 ```
 
+**Lead:**
 1. `search_lead(phone)` — search by phone
 2. **Found** → show lead details, confirm with contractor, use existing `leadId`
 3. **Not found** → `create_lead(fullName, phone)` immediately
-4. Also collect if offered: email, address, workType, source (ערוץ הגעה)
+4. Also collect if offered: email, workType, source (ערוץ הגעה)
    - `workType` allowed values: שיפוץ דירה, צביעת דירה, התקנת מזגן, שיפוץ אמבטיה, החלפת דלתות, שיפוץ מטבח, התקנת פרקט, שיפוץ כללי, התקנת חלונות
    - `source` allowed values: פייסבוק, המלצה, גוגל, אינסטגרם
 
-## Step 2: Project (פרויקט)
-
-Ask in **one prompt**:
-
-```
-"מעולה! עכשיו לגבי הפרויקט:
-• סוג פרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)
-• כתובת?"
-```
-
+**Project:**
 1. Auto-generate name: `"[fullName] — [address]"`
 2. `search_project(name)` — check for existing
 3. **Found** → confirm with contractor, use existing `projectId`
@@ -35,12 +31,12 @@ Ask in **one prompt**:
 ```
 "יש לך כתב כמויות (Excel) או שנעבור חדר חדר?"
 ```
-- If BOQ → jump to [Step 3-BOQ](#step-3-boq-כתב-כמויות)
-- If manual → continue to Step 3
+- If BOQ → jump to [Step 2-BOQ](#step-2-boq-כתב-כמויות)
+- If manual → continue to Step 2
 
 ---
 
-## Step 3: Manual Mode — Room-by-Room (חדר אחרי חדר)
+## Step 2: Manual Mode — Room-by-Room (חדר אחרי חדר)
 
 For each room:
 
@@ -65,7 +61,7 @@ For each room:
 9. Ask: "יש חדר נוסף?"
 10. Continue until contractor says "סיימתי" / "זהו" / "אין עוד" / "done"
 
-## Step 3-מכולות: Dumpsters (מכולות)
+## Step 2-מכולות: Dumpsters (מכולות)
 
 After all rooms are done:
 
@@ -80,7 +76,7 @@ After all rooms are done:
 
 ---
 
-## Step 3-BOQ: כתב כמויות
+## Step 2-BOQ: כתב כמויות
 
 When contractor provides a BOQ file (Excel):
 
@@ -101,7 +97,7 @@ When contractor provides a BOQ file (Excel):
    **If unmatched ≥ 4** → returns review URL instead of items:
    - `summary: {total, matched, unmatched}`
    - `review: {url, token, unmatched_count, expires_at}`
-   - → Jump to [Step 3-BOQ-URL](#step-3-boq-url-תמחור-דרך-קישור)
+   - → Jump to [Step 2-BOQ-URL](#step-2-boq-url-תמחור-דרך-קישור)
 
 6. **Process komplet items** — filter items where `Unit: "קומפלט"`, sub-classify into 3 groups, then present in one message:
 
@@ -186,20 +182,20 @@ When contractor provides a BOQ file (Excel):
 
 9. Show complete summary of all agent-handled items with pricing to contractor for confirmation
 
-→ Continue to Step 5-BOQ
+→ Continue to Step 4-BOQ
 
 ---
 
-## Step 3-BOQ-URL: תמחור דרך קישור
+## Step 2-BOQ-URL: תמחור דרך קישור
 
 When `create_quta_offer` returns a review URL (unmatched ≥ 4):
 
 1. Send contractor the **BOQ URL Review Request** message (see TEMPLATES.md) with the `review.url` and `review.unmatched_count`
 2. Wait for contractor to confirm they finished filling prices (e.g., "צור הצעה", "סיימתי", "create the offer")
 3. Skip `create_or_update_boq` entirely — the URL page saves all items directly
-4. → Continue to Step 5-BOQ-URL
+4. → Continue to Step 4-BOQ-URL
 
-## Step 5-BOQ-URL: Generate Quote — URL Flow (יצירת הצעת מחיר — קישור)
+## Step 4-BOQ-URL: Generate Quote — URL Flow (יצירת הצעת מחיר — קישור)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")`
 2. `create_boq_quote(project_id, offer_type="cost", document_id=drive_file_id)` — generate cost quote → returns drive link
@@ -214,9 +210,9 @@ When `create_quta_offer` returns a review URL (unmatched ≥ 4):
 
 ---
 
-## Step 4: Review (סקירה) — Manual Mode Only
+## Step 3: Review (סקירה) — Manual Mode Only
 
-> **Note:** Step 4 applies to manual mode only. BOQ mode skips directly to Step 5-BOQ.
+> **Note:** Step 3 applies to manual mode only. BOQ mode skips directly to Step 4-BOQ.
 
 1. `get_project_rooms(projectId)` — fetch all rooms with items
 2. Display complete summary — all rooms, all items, quantities, units, prices
@@ -225,7 +221,7 @@ When `create_quta_offer` returns a review URL (unmatched ≥ 4):
    - **Add items to existing room** → `scan_room` returns `room_exists` with current items → merge → `replace_room_items` with full list
    - **Corrections** → describe changes needed and handle accordingly
 
-## Step 5: Generate Quote — Manual Mode (יצירת הצעת מחיר — ללא כתב כמויות)
+## Step 4: Generate Quote — Manual Mode (יצירת הצעת מחיר — ללא כתב כמויות)
 
 1. `progress_update("⏳ מכין הצעת מחיר...")` — notify contractor before quote generation
 2. `create_quote(projectId, quote_type="cost")` — generate cost quote
@@ -242,7 +238,7 @@ When `create_quta_offer` returns a review URL (unmatched ≥ 4):
 10. **If contractor wants corrections to client quote** → run Offer Correction sub-flow with offer_type="client", then `create_quote(projectId, quote_type="client")` to regenerate, show updated client quote + `driveLink` again
 11. **Only after explicit client approval** → done.
 
-## Step 5-BOQ: Generate Quote — BOQ Mode (יצירת הצעת מחיר — כתב כמויות)
+## Step 4-BOQ: Generate Quote — BOQ Mode (יצירת הצעת מחיר — כתב כמויות)
 
 1. **Only if there are priced items** → `create_or_update_boq(project_id, offer_type="cost", updates_or_create=[...only items that received pricing...])` — items marked "יתומחר בהמשך" are excluded (already in DB with zero values). If all items are "יתומחר בהמשך", skip this call entirely.
 2. `progress_update("⏳ מכין הצעת מחיר...")`
@@ -263,7 +259,7 @@ When contractor identifies rows to correct after reviewing either offer:
 
 1. `progress_update("⏳ מעדכן הצעת מחיר...")` — once before the correction cycle
 2. Identify rows + what to change. Ask contractor if not clear
-3. Determine offer_type per Rule 19 — quantity changes → auto-update both; price changes → ask or infer
+3. Determine offer_type per Rule 18 — quantity changes → auto-update both; price changes → ask or infer
 4. For each offer_type:
    a. `get_offer_json(project_id, offer_type, item_raw="row1|row2")` — fetch current state
    b. Show current values using Offer Row Details template; confirm what will change

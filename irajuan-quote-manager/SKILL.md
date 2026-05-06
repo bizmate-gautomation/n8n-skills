@@ -33,7 +33,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
-| `get_catalog_candidates` | Fuzzy-search catalog for item matches | `{items: "pipe-separated names, e.g. פרקט\|צביעה\|שפכטל"}` → returns top 3 candidates per item with similarity, costs, hints, room tiers |
+| `get_catalog_candidates` | Fuzzy-search catalog for item matches | `{items: "pipe-separated names, e.g. פרקט\|צביעה\|שפכטל"}` → returns top 3 candidates per item with similarity, costs, hints |
 | `update_catalog` | Add new items to catalog | `{items: [{name*, type*, cost*, costForClient*, unit*, description?, aiSelectionHint?}]}` |
 
 ### BOQ (Bill of Quantities)
@@ -51,7 +51,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
 | `search_quote` | Search quotes by project ID | `{search_projectId*}` — returns quote records with name, links, dates |
-| `create_quote` | Generate quote with rooms snapshot (manual mode only — for BOQ quotes use `create_boq_quote`) | `{projectId*, fileLink?}` |
+| `create_quote` | Generate quote with rooms snapshot (manual mode only — for BOQ quotes use `create_boq_quote`) | `{projectId*, quote_type* ("cost"/"client"), fileLink?}` |
 | `get_offer_json` | Fetch offer items (cost or client) from generated quote | `{project_id*, offer_type* ("cost"/"client"), item_raw* ("1\|3" — pipe-separated row numbers, or "all" for ALL items)}` |
 | `update_offer_json` | Patch specific fields on offer rows | `{project_id*, offer_type* ("cost"/"client"), updates*: [{rowNum, quantity?, unit_cost?, total_cost?}]}` |
 | `progress_update` | Send WhatsApp progress message to contractor during long operations | `{update_message*}` |
@@ -70,16 +70,15 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 
 ## Quick Flow Overview
 
-1. **Lead** — ask full name + phone upfront → `search_lead` → create if needed
-2. **Project** — ask type/address → name = "[name] — [address]" → `search_project` → create if needed
-3. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
-3. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves). If unmatched < 4 → classify komplet A/B/C + price unmatched. If unmatched ≥ 4 → send review URL to contractor → wait for confirmation
-4. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
-4. **Match & Save (BOQ, < 4 unmatched)** — komplet: Group B → catalog match, Group C → manual pricing, Group A → auto 0. Unmatched non-komplet → `update_catalog` + pricing
-5. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
-6. **Quote (Manual)** — `create_quote` → show internal cost summary → contractor reviews → corrections → `create_quote` again → repeat until approved → show client quote
-6. **Quote (BOQ, < 4 unmatched)** — `create_or_update_boq(cost)` → `create_boq_quote(cost)` → review → approve → `create_or_update_boq(client)` → `create_boq_quote(client)` → review → approve
-6. **Quote (BOQ, ≥ 4 unmatched / URL flow)** — `create_boq_quote(cost)` → review → approve → `create_boq_quote(client)` → review → approve (no `create_or_update_boq` needed)
+1. **Lead + Project** — ask full name, phone, address, type in one prompt → `search_lead` → create if needed → name = "[name] — [address]" → `search_project` → create if needed
+2. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
+2. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves). If unmatched < 4 → classify komplet A/B/C + price unmatched. If unmatched ≥ 4 → send review URL to contractor → wait for confirmation
+3. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
+3. **Match & Save (BOQ, < 4 unmatched)** — komplet: Group B → catalog match, Group C → manual pricing, Group A → auto 0. Unmatched non-komplet → `update_catalog` + pricing
+3. **Unmatched** — no catalog match → ask contractor: search Google or enter price manually? Google → `WebSearch` for pricing links → contractor decides price. Either way → `update_catalog` → get catalog_id. Exception: "יתומחר בהמשך" items → 0 costs, unit "קומפלט", no catalog update
+4. **Quote (Manual)** — `create_quote` → show internal cost summary → contractor reviews → corrections → `create_quote` again → repeat until approved → show client quote
+4. **Quote (BOQ, < 4 unmatched)** — `create_or_update_boq(cost)` → `create_boq_quote(cost)` → review → approve → `create_or_update_boq(client)` → `create_boq_quote(client)` → review → approve
+4. **Quote (BOQ, ≥ 4 unmatched / URL flow)** — `create_boq_quote(cost)` → review → approve → `create_boq_quote(client)` → review → approve (no `create_or_update_boq` needed)
 
 
 For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
@@ -94,16 +93,15 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 6. **`offerType` parameter (manual mode only)** — `withoutBOQ` for manual entry. BOQ mode uses `create_or_update_boq` + `create_boq_quote` instead of `scan_room` + `create_quote`.
 7. **מכולות use roomName="כללי"** — after all rooms are done, ask how many מכולות and add to room "כללי" via catalog matching.
 8. **Project naming convention** — always format as: "[שם מלא] — [כתובת]".
-
-10. **Match before scan** — always call `get_catalog_candidates` before `scan_room` so rooms are created with full pricing.
-11. **BOQ item processing** — `parse_boq` returns `{id}`. `create_quta_offer` does catalog matching, auto-saves matched items, returns only unmatched + komplet items. Komplet items (Unit="קומפלט") are sub-classified by the agent into 3 groups: (A) auto "יתומחר בהמשך" — Notes/Description indicate can't be priced now, (B) catalog-resolvable — standard catalog work that needs a quantity from the contractor, (C) true manual pricing — everything else. When uncertain → default to Group C. Unmatched non-komplet items (reason="no match") → ask contractor for pricing → `update_catalog`. `_excel_row` is the unique item identifier (IDs can be duplicated across items).
-12. For catalog matching rules → [CATALOG_RULES.md](CATALOG_RULES.md)
-13. For domain terms → [DOMAIN.md](DOMAIN.md)
-14. For message formatting → [TEMPLATES.md](TEMPLATES.md)
-15. **"יתומחר בהמשך" items** — insert with 0 in all cost fields, unit="קומפלט", `_isCompleted: false`, `Status: "Pending Quote"`, never add to catalog (`update_catalog`). When prices arrive later, update the item only (not catalog). In BOQ mode, the agent auto-detects these from Notes/Description signals in `create_quta_offer` results (see Step 3-BOQ step 5, Group A) — no need for contractor to say "יתומחר בהמשך" explicitly.
-16. **Quote generation order** — ALWAYS show internal cost quote (עלות + רווח) to contractor first. Only after contractor explicitly approves the costs, proceed to generate the client-facing quote.
-17. **Progress updates** — call `progress_update` BEFORE starting these specific long operations: `parse_boq` + `create_quta_offer`, batch `get_catalog_candidates` (5+ items), multi-room `scan_room` loops (3+ rooms), `create_quote`, offer correction cycles. Use short Hebrew messages from Progress Messages templates (TEMPLATES.md). Send one update per distinct phase — do not send another update until the operation type changes (e.g., parsing → matching → room creation). Never send for: `search_lead`, `create_lead`, `search_project`, `create_project`, `get_project_rooms`, single-room operations, מכולות catalog search, or any interactive per-item flow.
-18. **Offer correction flow** — when contractor wants to change prices or quantities after quote generation: (1) `get_offer_json` to fetch current row state, (2) `update_offer_json` to patch only changed fields — always compute and include `total_cost` (= quantity × unit_cost) when changing quantity or unit_cost, (3) `get_offer_json` again for the SAME rows to verify changes applied — if values don't match, report the discrepancy to the contractor and retry, (4) regenerate: manual mode → `create_quote(projectId)`, BOQ mode → `create_boq_quote(project_id, offer_type, document_id)`. All four steps are mandatory — never skip the verification get. Use `item_raw` with specific row numbers (preferred in ~90% of cases) rather than fetching all items. When correcting both cost and client offers, run the get→update→verify cycle for each offer_type separately before regenerating.
-19. **Cost vs client offer updates** — quantity changes affect both offers, so auto-update both offer types without asking. For price changes: "change my cost" → `offer_type: "cost"`, "change client price" → `offer_type: "client"`, ambiguous → ask contractor which offer. Run the get→update→verify cycle per offer_type separately.
-20. **BOQ quote generation** — for BOQ quotes, use `create_boq_quote` to generate documents (not `create_quote`). `create_or_update_boq` is called twice — once with `offer_type="cost"` and once with `offer_type="client"` — each followed by `create_boq_quote` with the same offer_type.
-21. **`_isCompleted` and `Status` state transitions** — items from `create_quta_offer` start with `Status: "Pending Quote"` and `_isCompleted: false`. Transitions: (1) contractor provides manual pricing → `_isCompleted: true`, `Status: "Priced"`, (2) catalog-matched (Group B komplet or unmatched non-komplet) → `_isCompleted: true`, `Status: "Priced"`, (3) auto "יתומחר בהמשך" (Group A) or contractor says can't price → keep `_isCompleted: false`, `Status: "Pending Quote"`, costs = 0.
+9. **Match before scan** — always call `get_catalog_candidates` before `scan_room` so rooms are created with full pricing.
+10. **BOQ item processing** — `parse_boq` returns `{id}`. `create_quta_offer` does catalog matching, auto-saves matched items, returns only unmatched + komplet items. Komplet items (Unit="קומפלט") are sub-classified by the agent into 3 groups: (A) auto "יתומחר בהמשך" — Notes/Description indicate can't be priced now, (B) catalog-resolvable — standard catalog work that needs a quantity from the contractor, (C) true manual pricing — everything else. When uncertain → default to Group C. Unmatched non-komplet items (reason="no match") → ask contractor for pricing → `update_catalog`. `_excel_row` is the unique item identifier (IDs can be duplicated across items).
+11. For catalog matching rules → [CATALOG_RULES.md](CATALOG_RULES.md)
+12. For domain terms → [DOMAIN.md](DOMAIN.md)
+13. For message formatting → [TEMPLATES.md](TEMPLATES.md)
+14. **"יתומחר בהמשך" items** — insert with 0 in all cost fields, unit="קומפלט", `_isCompleted: false`, `Status: "Pending Quote"`, never add to catalog (`update_catalog`). When prices arrive later, update the item only (not catalog). In BOQ mode, the agent auto-detects these from Notes/Description signals in `create_quta_offer` results (see Step 2-BOQ step 5, Group A) — no need for contractor to say "יתומחר בהמשך" explicitly.
+15. **Quote generation order** — ALWAYS show internal cost quote (עלות + רווח) to contractor first. Only after contractor explicitly approves the costs, proceed to generate the client-facing quote.
+16. **Progress updates** — call `progress_update` BEFORE starting these specific long operations: `parse_boq` + `create_quta_offer`, batch `get_catalog_candidates` (5+ items), multi-room `scan_room` loops (3+ rooms), `create_quote`, offer correction cycles. Use short Hebrew messages from Progress Messages templates (TEMPLATES.md). Send one update per distinct phase — do not send another update until the operation type changes (e.g., parsing → matching → room creation). Never send for: `search_lead`, `create_lead`, `search_project`, `create_project`, `get_project_rooms`, single-room operations, מכולות catalog search, or any interactive per-item flow.
+17. **Offer correction flow** — when contractor wants to change prices or quantities after quote generation: (1) `get_offer_json` to fetch current row state, (2) `update_offer_json` to patch only changed fields — always compute and include `total_cost` (= quantity × unit_cost) when changing quantity or unit_cost, (3) `get_offer_json` again for the SAME rows to verify changes applied — if values don't match, report the discrepancy to the contractor and retry, (4) regenerate: manual mode → `create_quote(projectId)`, BOQ mode → `create_boq_quote(project_id, offer_type, document_id)`. All four steps are mandatory — never skip the verification get. Use `item_raw` with specific row numbers (preferred in ~90% of cases) rather than fetching all items. When correcting both cost and client offers, run the get→update→verify cycle for each offer_type separately before regenerating.
+18. **Cost vs client offer updates** — quantity changes affect both offers, so auto-update both offer types without asking. For price changes: "change my cost" → `offer_type: "cost"`, "change client price" → `offer_type: "client"`, ambiguous → ask contractor which offer. Run the get→update→verify cycle per offer_type separately.
+19. **BOQ quote generation** — for BOQ quotes, use `create_boq_quote` to generate documents (not `create_quote`). `create_or_update_boq` is called twice — once with `offer_type="cost"` and once with `offer_type="client"` — each followed by `create_boq_quote` with the same offer_type.
+20. **`_isCompleted` and `Status` state transitions** — items from `create_quta_offer` start with `Status: "Pending Quote"` and `_isCompleted: false`. Transitions: (1) contractor provides manual pricing → `_isCompleted: true`, `Status: "Priced"`, (2) catalog-matched (Group B komplet or unmatched non-komplet) → `_isCompleted: true`, `Status: "Priced"`, (3) auto "יתומחר בהמשך" (Group A) or contractor says can't price → keep `_isCompleted: false`, `Status: "Pending Quote"`, costs = 0.
