@@ -16,8 +16,7 @@ description: Manages construction renovation quotes for איראחואן (Y.H.B 
 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
-| `search_lead` | Search lead by phone | `{phone}` |
-| `create_lead` | Create new lead | `{fullName*, phone*, email?, address?, workType?, source?}` |
+| `create_lead` | Create new lead | `{fullName*, address*, email?, workType?, source?}` |
 | `search_project` | Search project by name | `{name}` |
 | `create_project` | Create project | `{name*, leadId*, type*, address}` |
 
@@ -70,7 +69,7 @@ Contractor provides Excel/PDF file. `parse_boq` stores it in DB, `create_quta_of
 
 ## Quick Flow Overview
 
-1. **Lead + Project + Mode** — ask full name, phone, address, type, and BOQ/manual in one prompt → `search_lead` → create if needed → name = "[name] — [address]" → `search_project` → create if needed → BOQ or room-by-room
+1. **Lead + Project + Mode** — ask full name, address, and BOQ/manual in one prompt → `create_lead` (no search) → name = "[name] — [address]" → `search_project` → create if needed (type defaults to "דירה") → BOQ or room-by-room
 2. **Items (Manual)** — room-by-room → `get_catalog_candidates` per batch → `scan_room` per room → מכולות
 2. **Items (BOQ)** — upload file → `create_boq_record` → `parse_boq` → `create_quta_offer` (backend matches + auto-saves). If unmatched < 4 → classify komplet A/B/C + price unmatched. If unmatched ≥ 4 → send review URL to contractor → wait for confirmation
 3. **Match & Save (Manual)** — for each room: `get_catalog_candidates(item names)` → Claude picks best match per item → `scan_room` with catalog_id + costs
@@ -85,7 +84,7 @@ For updating existing quotes → [WORKFLOW_UPDATE.md](WORKFLOW_UPDATE.md)
 
 ## Critical Rules
 
-1. **Always search before creating** — prevent duplicates. Use `search_lead` before `create_lead`, `search_project` before `create_project`.
+1. **Search project before creating** — prevent duplicate projects. Use `search_project` before `create_project`. Leads are created directly via `create_lead` (no search step).
 2. **Never invent IDs** — only use IDs returned from tool responses. Never guess or fabricate Airtable record IDs, project IDs, or room IDs.
 3. **Validate against allowed values** — see [AIRTABLE_SCHEMA.md](AIRTABLE_SCHEMA.md) for select field options.
 4. **Two price columns** — עלות (contractor cost) vs מחיר ללקוח (client price). Always track both. Never show עלות to the customer.

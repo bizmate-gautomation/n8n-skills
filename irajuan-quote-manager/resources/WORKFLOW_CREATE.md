@@ -5,20 +5,16 @@
 Ask for all details in **one prompt**:
 
 ```
-"שלום! בוא נתחיל ליצור הצעת מחיר.
+"שלום! בוא נתחיל ליצור הצעת מחיר חדשה.
 נא ציין:
-1.מה השם המלא של הלקוח
-2.מספר הטלפון
-3.כתובת הפרויקט
-4.סוג הפרויקט? (דירה / וילה / בית כנסת / חנות / משרדים / אחר)
-5.יש לך כתב כמויות (Excel) או שנעבור חדר חדר?"
+1. מה השם המלא של הלקוח?
+2. מה כתובת הפרויקט?
+3. האם יש לך כתב כמויות (Excel) או שנעבור חדר חדר?"
 ```
 
 **Lead:**
-1. `search_lead(phone)` — search by phone
-2. **Found** → show lead details, confirm with contractor, use existing `leadId`
-3. **Not found** → `create_lead(fullName, phone)` immediately
-4. Also collect if offered: email, workType, source (ערוץ הגעה)
+1. `create_lead(fullName, address)` immediately — no search step
+2. Also collect if offered: email, workType, source (ערוץ הגעה)
    - `workType` allowed values: שיפוץ דירה, צביעת דירה, התקנת מזגן, שיפוץ אמבטיה, החלפת דלתות, שיפוץ מטבח, התקנת פרקט, שיפוץ כללי, התקנת חלונות
    - `source` allowed values: פייסבוק, המלצה, גוגל, אינסטגרם
 
@@ -26,7 +22,7 @@ Ask for all details in **one prompt**:
 1. Auto-generate name: `"[fullName] — [address]"`
 2. `search_project(name)` — check for existing
 3. **Found** → confirm with contractor, use existing `projectId`
-4. **Not found** → `create_project(name, leadId, type, address)`
+4. **Not found** → `create_project(name, leadId, type="דירה", address)` — default `type` to "דירה" (not asked up front)
 
 **Branching:**
 - If BOQ (contractor sends Excel file or says yes) → jump to [Step 2-BOQ](#step-2-boq-כתב-כמויות)
